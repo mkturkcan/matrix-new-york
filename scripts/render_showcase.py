@@ -36,18 +36,22 @@ def main():
             except queue.Empty:
                 return
             name = j.get("save_name") or f"{Path(j['scene']).name}_{j['route']}"
-            if args.skip_existing and (ROOT / "outputs" / "videos" / f"{name}_hud.mp4").exists():
+            backend = j.get("backend", "mg3")
+            out_dir = ROOT / "outputs" / ("videos_gta" if backend == "gta" else "videos")
+            if args.skip_existing and (out_dir / f"{name}_hud.mp4").exists():
                 continue
-            cmd = [sys.executable, "-m", "nycdrive.drive", "--scene", j["scene"], "--route", j["route"],
-                   "--num_iterations", str(j.get("num_iterations", args.num_iterations)),
-                   "--seed", str(j.get("seed", 42)), "--save_name", name]
+            if backend == "gta":
+                cmd = [sys.executable, "-m", "nycdrive.drive_gta", "--latent_frames", str(j.get("latent_frames", 75))]
+            else:
+                cmd = [sys.executable, "-m", "nycdrive.drive", "--num_iterations", str(j.get("num_iterations", args.num_iterations))]
+            cmd += ["--scene", j["scene"], "--route", j["route"], "--seed", str(j.get("seed", 42)), "--save_name", name]
             if j.get("label"):
                 cmd += ["--label", j["label"]]
             if j.get("prompt"):
                 cmd += ["--prompt", j["prompt"]]
             env = dict(os.environ, CUDA_VISIBLE_DEVICES=gpu)
             print(f"[gpu {gpu}] start {name}", flush=True)
-            with open(log_dir / f"{name}.log", "w") as f:
+            with open(log_dir / f"{backend}_{name}.log", "w") as f:
                 rc = subprocess.call(cmd, cwd=ROOT, env=env, stdout=f, stderr=subprocess.STDOUT)
             print(f"[gpu {gpu}] done  {name} rc={rc}", flush=True)
 

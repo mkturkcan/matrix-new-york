@@ -1,0 +1,34 @@
+[
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/fdr_drive",
+  "route": "highway",
+  "title": "FDR Drive",
+  "label": "FDR DRIVE",
+  "num_iterations": 10
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/times_square",
+  "route": "downtown",
+  "title": "7th Ave / Times Square",
+  "label": "7TH AVE / TIMES SQUARE",
+  "num_iterations": 10
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/park_avenue",
+  "route": "downtown",
+  "title": "Park Avenue",
+  "label": "PARK AVENUE",
+  "num_iterations": 10
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/herald_square",
+  "route": "downtown",
+  "title": "Herald Square",
+  "label": "HERALD SQUARE",
+  "num_iterations": 10
+ }
+]

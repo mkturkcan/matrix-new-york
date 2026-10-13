@@ -4,152 +4,147 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Matrix New York</title>
-<meta name="description" content="Driving through New York City inside a world model: Street View panoramas + MeshFleet cars + Matrix-Game-3.0.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<meta name="description" content="Street View initial observations and a kinematic vehicle controller for action-conditioned video world models (Matrix-Game-2.0 GTA-drive, Matrix-Game-3.0) in New York City.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}]})"></script>
 <style>
-  :root {
-    --bg: #0b0c0f; --panel: #14161b; --line: #262a33; --text: #e9eaee; --muted: #9aa0ad;
-    --taxi: #ffcc00; --taxi-ink: #1a1400;
-  }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) { --bg: #f6f6f3; --panel: #ffffff; --line: #e2e2dc; --text: #16171a; --muted: #5d626d; }
+  :root { --bg:#fff; --fg:#1b1b1b; --muted:#5f6368; --rule:#dadce0; --link:#1a5fb4; --code:#f4f5f6; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#141516; --fg:#e6e6e6; --muted:#a0a4a8; --rule:#3a3d40; --link:#8ab4f8; --code:#1f2123; }
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; line-height: 1.55; }
-  a { color: inherit; }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
-  header.hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
-  .hero video { width: 100%; height: min(62vh, 640px); object-fit: cover; display: block; filter: saturate(1.05); }
-  .hero .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.0) 40%, rgba(0,0,0,.75) 100%); pointer-events: none; }
-  .hero .title { position: absolute; left: 0; right: 0; bottom: 28px; color: #fff; }
-  .badge { display: inline-block; font: 600 12px/1 "JetBrains Mono", monospace; letter-spacing: .08em; text-transform: uppercase;
-           background: var(--taxi); color: var(--taxi-ink); padding: 6px 8px; border-radius: 3px; }
-  h1 { font-size: clamp(36px, 7vw, 76px); line-height: .95; margin: 12px 0 10px; font-weight: 900; letter-spacing: -.02em; }
-  .hero p { max-width: 720px; margin: 0; font-size: clamp(15px, 2vw, 19px); color: #e8e8e8; }
-  .links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-  .btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 600; font-size: 14px;
-         padding: 10px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,.35); color: #fff; background: rgba(0,0,0,.35); }
-  .btn.primary { background: var(--taxi); color: var(--taxi-ink); border-color: var(--taxi); }
-  section { padding: 56px 0 8px; }
-  h2 { font-size: 28px; margin: 0 0 6px; letter-spacing: -.01em; }
-  .lede { color: var(--muted); margin: 0 0 24px; max-width: 760px; }
-  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
-  .tab { font: 600 13px/1 "JetBrains Mono", monospace; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--line);
-         background: var(--panel); color: var(--text); cursor: pointer; }
-  .tab[aria-selected="true"] { background: var(--taxi); color: var(--taxi-ink); border-color: var(--taxi); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .card video { width: 100%; aspect-ratio: 1280 / 704; display: block; background: #000; }
-  .card .meta { padding: 12px 14px 14px; }
-  .card .name { font-weight: 700; }
-  .card .sub { color: var(--muted); font-size: 13px; font-family: "JetBrains Mono", monospace; }
-  .pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
-  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .step img { width: 100%; aspect-ratio: 1280/704; object-fit: cover; display: block; }
-  .step .t { padding: 10px 12px 12px; font-size: 14px; }
-  .step .n { font: 600 12px "JetBrains Mono", monospace; color: var(--taxi); }
-  pre { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow-x: auto;
-        font: 13px/1.6 "JetBrains Mono", monospace; }
-  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-  .key { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
-  .key b { font-family: "JetBrains Mono", monospace; color: var(--taxi); margin-right: 6px; }
-  footer { color: var(--muted); font-size: 13px; padding: 48px 0 64px; border-top: 1px solid var(--line); margin-top: 56px; }
-  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } .hero video { height: 56vh; } }
+  html, body { margin:0; background:var(--bg); color:var(--fg); }
+  body { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 40px 16px 80px; }
+  a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 6px; font-weight: 700; letter-spacing: -0.01em; }
+  .subtitle { font-size: 19px; color: var(--muted); margin: 0 0 14px; }
+  .meta { font-size: 15px; margin-bottom: 28px; }
+  .meta a { margin-right: 14px; }
+  h2 { font-size: 22px; margin: 44px 0 10px; padding-top: 8px; border-top: 1px solid var(--rule); }
+  h3 { font-size: 17px; margin: 26px 0 8px; }
+  p, li { max-width: 78ch; }
+  ul { padding-left: 20px; }
+  code { font: 13.5px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--code); padding: 1px 4px; border-radius: 3px; overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+  .tablewrap { overflow-x: auto; }
+  pre { background: var(--code); padding: 14px 16px; overflow-x: auto; border-radius: 4px; }
+  pre code { background: none; padding: 0; }
+  figure { margin: 18px 0; }
+  figcaption { font-size: 13.5px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+  video, img { width: 100%; display: block; background: #000; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 14px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pair figcaption b, .grid2 figcaption b { color: var(--fg); font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; margin: 12px 0; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 10px 6px 0; }
+  thead th { border-top: 1.5px solid var(--fg); border-bottom: 1px solid var(--fg); font-weight: 600; }
+  tbody tr:last-child td { border-bottom: 1.5px solid var(--fg); }
+  .note { font-size: 14px; color: var(--muted); }
+  .refs li { font-size: 14px; margin-bottom: 4px; }
+  @media (max-width: 720px) { .grid2, .pair { grid-template-columns: 1fr; } .grid4 { grid-template-columns: 1fr 1fr; } h1 { font-size: 28px; } }
 </style>
 </head>
 <body>
-<header class="hero">
-  <video id="hero" autoplay muted loop playsinline></video>
-  <div class="shade"></div>
-  <div class="title"><div class="wrap">
-    <span class="badge">World model game demo</span>
-    <h1>Matrix New York</h1>
-    <p>Pick any spot in New York City. We pull the real Street View panorama, erase the cars around you, drop in your own 3D car, and let the <b>Matrix-Game-3.0</b> world model do the rest: every frame after the first is generated.</p>
-    <div class="links">
-      <a class="btn primary" href="https://github.com/mkturkcan/matrix-new-york">GitHub repo</a>
-      <a class="btn" href="https://huggingface.co/Skywork/Matrix-Game-3.0">Matrix-Game-3.0</a>
-      <a class="btn" href="https://huggingface.co/datasets/DamianBoborzi/MeshFleet">MeshFleet</a>
-      <a class="btn" href="https://github.com/sk-zk/streetlevel">streetlevel</a>
-    </div>
-  </div></div>
-</header>
+<main>
 
-<main class="wrap">
-  <section>
-    <h2>Drive the city</h2>
-    <p class="lede">Each clip starts from a single real Street View frame. Everything after that comes from the world model, driven by keyboard and steering actions: W for throttle, yaw for the steering wheel, short strafes for lane changes. Matrix-Game-3.0 is a first-person model, so it would drive straight through the car in the first frame. Like a game engine drawing the player over the world, we re-draw the same car layer on every frame and let it lean with the steering.</p>
-    <div class="tabs" role="tablist" id="tabs"></div>
-    <div class="grid" id="grid"></div>
-  </section>
+<h1>Matrix New York</h1>
+<p class="subtitle">Driving through New York City in action-conditioned video world models</p>
+<div class="meta">
+  Mehmet Kerem Turkcan &nbsp;·&nbsp;
+  <a href="https://github.com/mkturkcan/matrix-new-york">Code</a>
+  <a href="https://github.com/mkturkcan/matrix-new-york/releases">Releases</a>
+</div>
 
-  <section>
-    <h2>How a scene is built</h2>
-    <p class="lede">One Python script turns a latitude and longitude into a playable first frame: find the nearest official Street View panorama, look down the road, erase the vehicles near the camera, and drop in a MeshFleet car rendered from a chase camera.</p>
-    <div class="pipeline" id="pipeline"></div>
-  </section>
+<figure>
+  <video src="videos/gta/fdr_drive_highway.mp4" autoplay muted loop playsinline controls></video>
+  <figcaption>Matrix-Game-2.0 GTA-drive. <b>FDR Drive</b>. Route <code>highway</code>; panorama 2026-04, (40.7427, -73.9722); 297 frames at 12 fps.</figcaption>
+</figure>
 
-  <section>
-    <h2>Controls (interactive mode)</h2>
-    <p class="lede">In interactive mode the world model pauses after every chunk and waits for your next command.</p>
-    <div class="controls">
-      <div class="key"><b>w</b>gas</div>
-      <div class="key"><b>s</b>brake / reverse</div>
-      <div class="key"><b>a / d</b>steer left / right</div>
-      <div class="key"><b>wa / wd</b>accelerate through a turn</div>
-      <div class="key"><b>z / c</b>lane change left / right</div>
-      <div class="key"><b>q</b>coast</div>
-    </div>
-  </section>
+<h2>Overview</h2>
+<p>We build initial observations for pretrained interactive video world models from Google Street View panoramas of New York City, and drive the models with a kinematic vehicle controller. For a query location we retrieve the nearest panorama captured by a Google Street View car and reproject it to a 1280×704 perspective view along the capture heading. We then remove near-field vehicles (Mask2Former segmentation, LaMa inpainting) and insert a vehicle mesh from MeshFleet rendered under a chase camera. Driver inputs (throttle, steering) are integrated by a kinematic bicycle model and mapped to the action spaces of two pretrained models: the Matrix-Game-2.0 GTA-drive checkpoint, a third-person driving model trained on GTA V, and Matrix-Game-3.0, a first-person model. No model is fine-tuned.</p>
+<ul>
+  <li><b>Matrix-Game-2.0 GTA-drive</b> carries the inserted vehicle forward and produces non-holonomic motion: steering changes the vehicle's heading rather than translating it sideways, at speeds comparable to the source game. The scene, and to a lesser degree the vehicle, drift toward the GTA V appearance distribution after roughly 8–12 s, and the model reproduces the game's minimap in the lower-left corner.</li>
+  <li><b>Matrix-Game-3.0</b> keeps the photographic appearance of the initial frame for longer, at 704×1280, but has no notion of an ego vehicle. A vehicle in the conditioning frame is treated as static scene content and passed through within ~1 s. We therefore condition it on the vehicle-free frame and draw the vehicle from renders indexed by the controller's yaw relative to the camera. Its forward speed is fixed by the model and cannot be raised through the action interface (see Limitations).</li>
+  <li>Each clip runs on a single RTX PRO 6000 (Blackwell). Measured throughput after model load is ≈18 frames/s at 352×640 for Matrix-Game-2.0 GTA-drive and ≈3.6 frames/s at 704×1280 for Matrix-Game-3.0 (bf16, no int8, synchronous VAE).</li>
+</ul>
 
-  <section>
-    <h2>Run it</h2>
-<pre># 1. build first frames (curated scenes, a random NYC spot, or your own lat/lon)
-python -m nycdrive.prepare_inputs                 # curated highway + downtown scenes
-python -m nycdrive.prepare_inputs --random        # random spot in NYC
-python -m nycdrive.prepare_inputs --lat 40.7580 --lon -73.9855 --name my_spot
+<h2>Results: Matrix-Game-2.0 GTA-drive</h2>
+<p class="note">Each clip has 297 frames at 12 fps (≈25 s), generated autoregressively from the single frame shown at t = 0. The model outputs 352×640; clips are upsampled 2× (Lanczos) for display. The overlay shows the controller state: W/S duty cycle, steering input, and simulated speed. Speed is the vehicle-model state, not an estimate from the video.</p>
+<h3>Highway</h3><div class="grid2"><figure><video src="videos/gta/fdr_drive_highway.mp4" poster="videos/gta/fdr_drive_highway.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>FDR Drive</b>. Route <code>highway</code>; panorama 2026-04, (40.7427, -73.9722); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/gowanus_expressway_highway.mp4" poster="videos/gta/gowanus_expressway_highway.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Gowanus Expressway</b>. Route <code>highway</code>; panorama 2026-09, (40.6632, -73.9986); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/henry_hudson_pkwy_highway.mp4" poster="videos/gta/henry_hudson_pkwy_highway.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Henry Hudson Parkway</b>. Route <code>highway</code>; panorama 2026-07, (40.7997, -73.9749); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/fdr_drive_slalom.mp4" poster="videos/gta/fdr_drive_slalom.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>FDR Drive</b>. Route <code>slalom</code>; panorama 2026-04, (40.7427, -73.9722); 297 frames at 12 fps.</figcaption></figure></div><h3>Urban</h3><div class="grid2"><figure><video src="videos/gta/times_square_downtown.mp4" poster="videos/gta/times_square_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>7th Ave / Times Square</b>. Route <code>downtown</code>; panorama 2024-08, (40.7580, -73.9856); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/fifth_avenue_downtown.mp4" poster="videos/gta/fifth_avenue_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Fifth Avenue</b>. Route <code>downtown</code>; panorama 2026-04, (40.7538, -73.9806); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/park_avenue_downtown.mp4" poster="videos/gta/park_avenue_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Park Avenue</b>. Route <code>downtown</code>; panorama 2026-04, (40.7561, -73.9746); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/canal_street_turn_right.mp4" poster="videos/gta/canal_street_turn_right.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Canal Street</b>. Route <code>turn_right</code>; panorama 2026-04, (40.7176, -73.9993); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/soho_broadway_downtown.mp4" poster="videos/gta/soho_broadway_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Broadway, SoHo</b>. Route <code>downtown</code>; panorama 2026-04, (40.7235, -73.9985); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/dumbo_cruise.mp4" poster="videos/gta/dumbo_cruise.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>DUMBO</b>. Route <code>cruise</code>; panorama 2017-12, (40.7033, -73.9896); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/times_square_turn_right.mp4" poster="videos/gta/times_square_turn_right.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>7th Ave / Times Square</b>. Route <code>turn_right</code>; panorama 2024-08, (40.7580, -73.9856); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/park_avenue_slalom.mp4" poster="videos/gta/park_avenue_slalom.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Park Avenue</b>. Route <code>slalom</code>; panorama 2026-04, (40.7561, -73.9746); 297 frames at 12 fps.</figcaption></figure></div><h3>Random / user-specified</h3><div class="grid2"><figure><video src="videos/gta/herald_square_downtown.mp4" poster="videos/gta/herald_square_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Herald Square (--lat/--lon)</b>. Route <code>downtown</code>; panorama 2026-04, (40.7497, -73.9877); 297 frames at 12 fps.</figcaption></figure><figure><video src="videos/gta/random_40.67570_-73.92808_cruise.mp4" poster="videos/gta/random_40.67570_-73.92808_cruise.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Crown Heights (--random)</b>. Route <code>cruise</code>; panorama 2022-10, (40.6757, -73.9281); 297 frames at 12 fps.</figcaption></figure></div>
 
-# 2. drive: scripted route to video, or play interactively
-python -m nycdrive.drive --scene data/inputs/fdr_drive --route highway
-python -m nycdrive.drive --scene data/inputs/times_square --interactive</pre>
-  </section>
+<h2>Backend comparison</h2>
+<p class="note">Same initial observation and the same input sequence. Left: Matrix-Game-2.0 GTA-drive (third-person, vehicle generated by the model). Right: Matrix-Game-3.0, conditioned on the vehicle-free frame, with the vehicle drawn from the controller state.</p>
+<div class="pair"><figure><video src="videos/gta/fdr_drive_highway.mp4" poster="videos/gta/fdr_drive_highway.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Matrix-Game-2.0 GTA-drive</b>, 352×640 (2× upsampled), 12 fps.</figcaption></figure><figure><video src="videos/mg3/fdr_drive_highway.mp4" poster="videos/mg3/fdr_drive_highway.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Matrix-Game-3.0</b>, 704×1280, 17 fps.</figcaption></figure></div><p class="note">FDR Drive, route <code>highway</code>; panorama 2026-04, (40.7427, -73.9722).</p><div class="pair"><figure><video src="videos/gta/times_square_downtown.mp4" poster="videos/gta/times_square_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Matrix-Game-2.0 GTA-drive</b>, 352×640 (2× upsampled), 12 fps.</figcaption></figure><figure><video src="videos/mg3/times_square_downtown.mp4" poster="videos/mg3/times_square_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Matrix-Game-3.0</b>, 704×1280, 17 fps.</figcaption></figure></div><p class="note">7th Ave / Times Square, route <code>downtown</code>; panorama 2024-08, (40.7580, -73.9856).</p><div class="pair"><figure><video src="videos/gta/park_avenue_downtown.mp4" poster="videos/gta/park_avenue_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Matrix-Game-2.0 GTA-drive</b>, 352×640 (2× upsampled), 12 fps.</figcaption></figure><figure><video src="videos/mg3/park_avenue_downtown.mp4" poster="videos/mg3/park_avenue_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Matrix-Game-3.0</b>, 704×1280, 17 fps.</figcaption></figure></div><p class="note">Park Avenue, route <code>downtown</code>; panorama 2026-04, (40.7561, -73.9746).</p><div class="pair"><figure><video src="videos/gta/herald_square_downtown.mp4" poster="videos/gta/herald_square_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Matrix-Game-2.0 GTA-drive</b>, 352×640 (2× upsampled), 12 fps.</figcaption></figure><figure><video src="videos/mg3/herald_square_downtown.mp4" poster="videos/mg3/herald_square_downtown.jpg" muted loop playsinline controls preload="none"></video><figcaption><b>Matrix-Game-3.0</b>, 704×1280, 17 fps.</figcaption></figure></div><p class="note">Herald Square, route <code>downtown</code>; panorama 2026-04, (40.7497, -73.9877).</p>
 
-  <footer>
-    Built on <a href="https://github.com/SkyworkAI/Matrix-Game">Matrix-Game-3.0</a> (Skywork AI, Apache-2.0),
-    <a href="https://github.com/sk-zk/streetlevel">streetlevel</a>,
-    <a href="https://huggingface.co/datasets/DamianBoborzi/MeshFleet">MeshFleet</a> (car meshes from Sketchfab, CC-BY: see the repo README for each author),
-    Mask2Former and LaMa. Street View imagery © Google. This is a research demo, not affiliated with any of the above.
-  </footer>
+<h2>Method</h2>
+<h3>Initial observation</h3>
+<div class="grid4"><figure><img src="assets/step_raw.jpg" alt="(a) Perspective view along the capture heading." loading="lazy"><figcaption>(a) Perspective view along the capture heading.</figcaption></figure><figure><img src="assets/step_mask.jpg" alt="(b) Near-field vehicle mask (red)." loading="lazy"><figcaption>(b) Near-field vehicle mask (red).</figcaption></figure><figure><img src="assets/step_inpainted.jpg" alt="(c) LaMa inpainting; Matrix-Game-3.0 conditioning frame." loading="lazy"><figcaption>(c) LaMa inpainting; Matrix-Game-3.0 conditioning frame.</figcaption></figure><figure><img src="assets/step_image.jpg" alt="(d) Inserted MeshFleet vehicle; Matrix-Game-2.0 GTA-drive conditioning frame." loading="lazy"><figcaption>(d) Inserted MeshFleet vehicle; Matrix-Game-2.0 GTA-drive conditioning frame.</figcaption></figure></div><p class="note">Example: TIMES SQUARE, panorama 2024-08, (40.7580, -73.9856).</p>
+<ul>
+  <li><b>Retrieval.</b> The single-image search endpoint that <code>streetlevel.streetview.find_panorama</code> relies on has been decommissioned. We query Street View coverage tiles instead; they list only panoramas captured by Google's own vehicles. We fetch metadata by panorama id, prefer panoramas on the named road (e.g. FDR Drive over its service road), and download at zoom 4, falling back to zoom 3 when tiles are missing.</li>
+  <li><b>View.</b> Equirectangular-to-perspective remap, yaw = capture heading (or a user-specified heading), pitch −3°, horizontal FOV 90°, output 1280×704.</li>
+  <li><b>Near-field vehicle removal.</b> Mask2Former (Swin-L, Cityscapes) semantic classes {car, truck, bus, train, motorcycle, bicycle}. A connected component is removed if it is in the ego lane ahead, touches the bottom of the frame, is large or tall, or overlaps the footprint of the inserted vehicle. Parked vehicles at the image sides are kept. Masks are dilated by 18 px and extended downward to cover shadows; holes are filled with LaMa (big-lama). Black no-data regions of the panorama are added to the mask.</li>
+  <li><b>Vehicle insertion.</b> CC-BY vehicle meshes from MeshFleet are rendered with pyrender (EGL) from about two car lengths behind and above the car, and composited at 31% of the image width with a two-layer blurred contact shadow and a global gain/tint match to the scene. For Matrix-Game-3.0 we additionally render 17 yaw angles (−24° to +24° in 3° steps) about the rear axle.</li>
+</ul>
+
+<h3>Vehicle model and action mapping</h3>
+<p>Inputs are throttle/brake \(u_t\in[-1,1]\) and steering \(s_t\in[-1,1]\) at the backend frame rate. The steering input is low-pass filtered (\(\tau=0.15\) s) and integrated with a kinematic bicycle model and a first-order chase camera:</p>
+\[
+\dot v = a^{+}\max(u,0) + a^{-}\min(u,0) - c\,v,\qquad
+\delta = \frac{s\,\delta_{\max}}{1 + v/v_{\mathrm{ref}}},\qquad
+\dot\psi = \frac{v}{L}\tan\delta,\qquad
+\dot\psi_{c} = \frac{\psi-\psi_{c}}{\tau_c},
+\]
+<p>with \(L=2.7\) m, \(\delta_{\max}=32^\circ\), \(v_{\mathrm{ref}}=6\) m/s, \(a^{+}=3\) m/s², \(a^{-}=7\) m/s², \(c=0.12\) s⁻¹, \(v\le 25\) m/s, \(\tau_c=0.35\) s. Lane changes are steering doublets (\(s=\pm0.7\) for 0.5 s each). Neither model has an analog throttle, so continuous commands are mapped to binary keys by pulse-width modulation.</p>
+<div class="tablewrap"><table>
+  <thead><tr><th></th><th>Matrix-Game-2.0 GTA-drive</th><th>Matrix-Game-3.0</th></tr></thead>
+  <tbody>
+    <tr><td>Viewpoint</td><td>third-person chase camera</td><td>first-person</td></tr>
+    <tr><td>Keyboard</td><td>[W, S] = PWM(\(u^{+}\)), PWM(\(u^{-}\)), 1 s period</td><td>W = PWM(\(\min(v/10\,\mathrm{m/s},\,1)\)), 0.5 s period; A/D unused</td></tr>
+    <tr><td>Mouse yaw</td><td>\(0.1\,s\) (the training data uses ±0.1 for A/D)</td><td>\(\Delta\psi_c/15^\circ\) per frame; values below the 0.02 deadzone are accumulated</td></tr>
+    <tr><td>Ego vehicle</td><td>generated by the model</td><td>render at relative yaw \(\psi-\psi_c\)</td></tr>
+    <tr><td>Conditioning frame</td><td>with inserted vehicle</td><td>vehicle-free (inpainted)</td></tr>
+    <tr><td>Resolution, rate</td><td>352×640, 12 fps</td><td>704×1280, 17 fps</td></tr>
+    <tr><td>Sampling</td><td>3 steps, causal blocks of 3 latent frames, KV cache</td><td>3 steps, 56-frame windows advancing 40 frames, camera-aware memory</td></tr>
+    <tr><td>Text prompt</td><td>none (image + actions)</td><td>per-scene prompt</td></tr>
+  </tbody>
+</table></div>
+<p class="note">The GTA-drive checkpoint (<code>gta_distilled_model/gta_keyboard2dim.safetensors</code>) was published in <code>Skywork/Matrix-Game-2.0</code> and later removed from the main branch. We load it from revision <code>f1729d9</code> and use the matching inference code from commit <code>756776d^</code> of <code>SkyworkAI/Matrix-Game</code>.</p>
+
+<h2>Limitations</h2>
+<ul>
+  <li>Only the first frame is observed. Building layout, signage and traffic beyond it are sampled from the model's prior and do not correspond to the real street network.</li>
+  <li>GTA-drive outputs converge to GTA V appearance (geometry simplification, sky and water shading, vehicle identity) on the timescale of the clip. Shorter rollouts or periodic re-anchoring to Street View would be needed for geographic fidelity.</li>
+  <li>The Matrix-Game-3.0 ego vehicle is a 2D layer driven by the controller. It is not occluded by, does not cast shadows onto, and does not interact with generated content.</li>
+  <li>Large heading changes mid-block (e.g. 90° turns away from intersections) steer the camera into building facades and the rollout degrades. Turns are only meaningful when the initial frame is at an intersection.</li>
+  <li>Matrix-Game-3.0 moves a fixed distance per frame while W is held, so its maximum speed is set by the model, not the controller. Scaling the camera translation used for its Plücker-ray conditioning by 3× left the output essentially unchanged (mean Farnebäck flow 0.65 vs 0.66 px/frame at 320 px width). A lower W duty cycle does reduce speed (0.04 px/frame at 12% duty). The Matrix-Game-3.0 overlay therefore shows no speed readout.</li>
+</ul>
+
+<h2>Reproduction</h2>
+<pre><code>python -m nycdrive.prepare_inputs                                # curated scenes
+python -m nycdrive.prepare_inputs --random --seed 7              # random location
+python -m nycdrive.prepare_inputs --lat 40.7497 --lon -73.9877 --name herald_square
+
+python -m nycdrive.drive_gta --scene data/inputs/fdr_drive --route highway   # Matrix-Game-2.0 GTA-drive
+python -m nycdrive.drive     --scene data/inputs/fdr_drive --route highway   # Matrix-Game-3.0
+python -m nycdrive.drive     --scene data/inputs/fdr_drive --interactive     # step-wise keyboard control</code></pre>
+<p class="note">Route presets (<code>cruise</code>, <code>highway</code>, <code>downtown</code>, <code>slalom</code>, <code>turn_left</code>, <code>turn_right</code>) are defined in <code>nycdrive/vehicle.py</code>; custom routes are JSON lists of <code>[seconds, throttle, steer]</code>.</p>
+
+<h2>References and assets</h2>
+<ol class="refs">
+  <li>Skywork AI. <a href="https://github.com/SkyworkAI/Matrix-Game">Matrix-Game 2.0</a>: an open-source, real-time, streaming interactive world model, 2025. Weights: <a href="https://huggingface.co/Skywork/Matrix-Game-2.0">Skywork/Matrix-Game-2.0</a>.</li>
+  <li>Skywork AI. <a href="https://huggingface.co/Skywork/Matrix-Game-3.0">Matrix-Game 3.0</a>: real-time and streaming interactive world model with long-horizon memory, 2026.</li>
+  <li>D. Boborzi et al. <a href="https://arxiv.org/abs/2503.14002">MeshFleet</a>: filtered and annotated 3D vehicle dataset for domain-specific generative modeling, 2025.</li>
+  <li>B. Cheng et al. Masked-attention mask transformer for universal image segmentation (Mask2Former). CVPR 2022.</li>
+  <li>R. Suvorov et al. Resolution-robust large mask inpainting with Fourier convolutions (LaMa). WACV 2022.</li>
+  <li>sk-zk. <a href="https://github.com/sk-zk/streetlevel">streetlevel</a>. Street View imagery © Google.</li>
+  <li>Vehicle meshes (CC-BY, via MeshFleet / Sketchfab): "Subaru WRX STI" by Skyborg; "SuzukiVitara3DModel" by TuMankito77; "Dodge-charger-pov" by lukas.ohmer; a Ford Mustang GT and a Ferrari 488 whose Sketchfab pages are no longer online (see the repository README).</li>
+</ol>
+
 </main>
-
-<script>
-const DATA = /*DATA*/{"videos": [{"src": "videos/fdr_drive_highway.mp4", "poster": "videos/fdr_drive_highway.jpg", "group": "Highway", "title": "FDR Drive along the East River", "sub": "route: highway \u00b7 fdr_drive"}, {"src": "videos/times_square_downtown.mp4", "poster": "videos/times_square_downtown.jpg", "group": "Downtown", "title": "Seventh Avenue through Times Square", "sub": "route: downtown \u00b7 times_square"}, {"src": "videos/gowanus_expressway_highway.mp4", "poster": "videos/gowanus_expressway_highway.jpg", "group": "Highway", "title": "Gowanus Expressway, Brooklyn", "sub": "route: highway \u00b7 gowanus_expressway"}, {"src": "videos/fifth_avenue_downtown.mp4", "poster": "videos/fifth_avenue_downtown.jpg", "group": "Downtown", "title": "Fifth Avenue, Midtown", "sub": "route: downtown \u00b7 fifth_avenue"}, {"src": "videos/henry_hudson_pkwy_highway.mp4", "poster": "videos/henry_hudson_pkwy_highway.jpg", "group": "Highway", "title": "Henry Hudson Parkway", "sub": "route: highway \u00b7 henry_hudson_pkwy"}, {"src": "videos/park_avenue_downtown.mp4", "poster": "videos/park_avenue_downtown.jpg", "group": "Downtown", "title": "Park Avenue", "sub": "route: downtown \u00b7 park_avenue"}, {"src": "videos/canal_street_cruise.mp4", "poster": "videos/canal_street_cruise.jpg", "group": "Downtown", "title": "Canal Street, Chinatown", "sub": "route: cruise \u00b7 canal_street"}, {"src": "videos/fdr_drive_weave.mp4", "poster": "videos/fdr_drive_weave.jpg", "group": "Highway", "title": "FDR Drive, weaving through lanes", "sub": "route: weave \u00b7 fdr_drive"}, {"src": "videos/soho_broadway_downtown.mp4", "poster": "videos/soho_broadway_downtown.jpg", "group": "Downtown", "title": "Broadway, SoHo", "sub": "route: downtown \u00b7 soho_broadway"}, {"src": "videos/dumbo_cruise.mp4", "poster": "videos/dumbo_cruise.jpg", "group": "Downtown", "title": "DUMBO cobblestones, Brooklyn", "sub": "route: cruise \u00b7 dumbo"}, {"src": "videos/times_square_sightseeing.mp4", "poster": "videos/times_square_sightseeing.jpg", "group": "Downtown", "title": "Times Square, looking around", "sub": "route: sightseeing \u00b7 times_square"}, {"src": "videos/random_40.67570_-73.92808_cruise.mp4", "poster": "videos/random_40.67570_-73.92808_cruise.jpg", "group": "Random & custom", "title": "Random spot: Crown Heights, Brooklyn", "sub": "--random --seed 7 \u00b7 route: cruise"}, {"src": "videos/herald_square_downtown.mp4", "poster": "videos/herald_square_downtown.jpg", "group": "Random & custom", "title": "Custom lat/lon: Herald Square", "sub": "--lat 40.7497 --lon -73.9877 \u00b7 route: downtown"}], "pipeline": [{"src": "assets/step_raw.jpg", "title": "Street View panorama, reprojected to look down the road"}, {"src": "assets/step_mask.jpg", "title": "Vehicles near the camera segmented (Mask2Former)"}, {"src": "assets/step_inpainted.jpg", "title": "Nearby cars erased with LaMa inpainting"}, {"src": "assets/step_image.jpg", "title": "MeshFleet car rendered in chase-cam view and composited"}], "hero": "videos/hero.mp4"}/*END*/;
-const grid = document.getElementById('grid'), tabs = document.getElementById('tabs');
-document.getElementById('hero').src = DATA.hero;
-const groups = ['All', ...new Set(DATA.videos.map(v => v.group))];
-function render(group) {
-  grid.innerHTML = '';
-  DATA.videos.filter(v => group === 'All' || v.group === group).forEach(v => {
-    const c = document.createElement('div'); c.className = 'card';
-    c.innerHTML = `<video src="${v.src}" poster="${v.poster || ''}" muted loop playsinline preload="metadata" controls></video>
-      <div class="meta"><div class="name">${v.title}</div><div class="sub">${v.sub}</div></div>`;
-    grid.appendChild(c);
-  });
-  const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? e.target.play().catch(()=>{}) : e.target.pause()), {threshold: .4});
-  grid.querySelectorAll('video').forEach(el => io.observe(el));
-}
-groups.forEach((g, i) => {
-  const b = document.createElement('button'); b.className = 'tab'; b.textContent = g; b.setAttribute('role', 'tab');
-  b.setAttribute('aria-selected', i === 0); b.onclick = () => { tabs.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t === b)); render(g); };
-  tabs.appendChild(b);
-});
-render('All');
-const pipe = document.getElementById('pipeline');
-DATA.pipeline.forEach((s, i) => {
-  const d = document.createElement('div'); d.className = 'step';
-  d.innerHTML = `<img src="${s.src}" alt="${s.title}" loading="lazy"><div class="t"><div class="n">STEP ${i + 1}</div>${s.title}</div>`;
-  pipe.appendChild(d);
-});
-</script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-"""Re-apply the player-car layer and HUD to saved world-model rollouts (<name>_world.mp4).
+"""Re-draw the player vehicle and HUD on saved Matrix-Game-3.0 rollouts (<name>_world.mp4 + _actions.npz).
 
-    python scripts/postprocess.py configs/showcase.json
+    python scripts/postprocess.py configs/comparison.json
 """
 import argparse
 import json
@@ -12,9 +12,10 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from nycdrive.drive import rel_yaw_from_mouse  # noqa: E402
 from nycdrive.hud import draw_hud  # noqa: E402
-from nycdrive.player import composite_player, load_car_layer  # noqa: E402
-from nycdrive.routes import FPS, build_actions  # noqa: E402
+from nycdrive.player import composite_player, load_car_sprites  # noqa: E402
+from nycdrive.vehicle import FPS, route_controls  # noqa: E402
 
 
 def main():
@@ -24,29 +25,19 @@ def main():
     for j in json.loads(Path(args.config).read_text()):
         name = j.get("save_name") or f"{Path(j['scene']).name}_{j['route']}"
         base = ROOT / "outputs" / "videos" / name
-        world = Path(f"{base}_world.mp4")
-        if not world.exists():
-            print("missing", world)
+        if not Path(f"{base}_world.mp4").exists():
+            print("missing", base)
             continue
-        frames = np.stack(imageio.mimread(world, memtest=False))
-        if Path(f"{base}_actions.npz").exists():
-            a = np.load(f"{base}_actions.npz")
-            keyboard, mouse = a["keyboard"], a["mouse"]
-        else:
-            acts = build_actions(j["route"], len(frames))
-            keyboard, mouse = acts["keyboard_condition"].numpy(), acts["mouse_condition"].numpy()
-            np.savez(f"{base}_actions.npz", keyboard=keyboard, mouse=mouse)
-        scene = ROOT / j["scene"]
-        meta = json.loads((scene / "meta.json").read_text()) if (scene / "meta.json").exists() else {}
-        layer = load_car_layer(scene)
-        if layer is not None:
-            frames = composite_player(frames, keyboard, mouse, layer)
+        frames = np.stack(imageio.mimread(f"{base}_world.mp4", memtest=False))
+        a = np.load(f"{base}_actions.npz")
+        keyboard, mouse = a["keyboard"], a["mouse"]
+        sprites = load_car_sprites(ROOT / j["scene"])
+        frames = composite_player(frames, rel_yaw_from_mouse(mouse), sprites, moving=keyboard[:, 0] > 0.5)
         imageio.mimwrite(f"{base}_clean.mp4", frames, fps=FPS, quality=8, macro_block_size=None)
-        top = j.get("top_speed") or (55 if meta.get("type") == "highway" or j["route"] in ("highway", "weave") else 25)
-        label = (j.get("label") or meta.get("label") or scene.name).upper()
-        hud = draw_hud(frames, keyboard, mouse, label=label, top_speed=top)
-        imageio.mimwrite(f"{base}_hud.mp4", hud, fps=FPS, quality=8, macro_block_size=None)
-        print("done", name, len(frames), "frames")
+        controls = route_controls(j["route"], len(frames), fps=FPS)
+        label = (j.get("label") or Path(j["scene"]).name).upper()
+        imageio.mimwrite(f"{base}_hud.mp4", draw_hud(frames, controls, None, label), fps=FPS, quality=8, macro_block_size=None)
+        print("done", name)
 
 
 if __name__ == "__main__":

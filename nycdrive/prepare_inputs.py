@@ -317,56 +317,80 @@ class Inpainter:
 # ----------------------------------------------------------------------------
 # Player car compositing
 # ----------------------------------------------------------------------------
+# Chase cam: ~2 car lengths behind, ~1.5 car heights above the ground.
+CHASE_CAM = dict(size=1400, cam_height=0.48, cam_dist=2.0, fov_deg=30.0)
+# Player car placement on the 1280x704 frame (bottom-center).
+CAR_WIDTH_FRAC, CAR_BOTTOM_MARGIN = 0.31, 34
+
 _SPRITE_CACHE: dict[str, Image.Image] = {}
 
 
 def car_sprite(key: str) -> Image.Image:
     if key not in _SPRITE_CACHE:
         car = PLAYER_CARS[key]
-        # Chase cam: ~2 car lengths behind, ~1.5 car heights above the ground.
-        _SPRITE_CACHE[key] = render_car(mesh_path(car), car.yaw_deg, view_yaw_deg=0.0,
-                                        size=1400, cam_height=0.48, cam_dist=2.0, fov_deg=30.0)
+        _SPRITE_CACHE[key] = render_car(mesh_path(car), car.yaw_deg, view_yaw_deg=0.0, **CHASE_CAM)
     return _SPRITE_CACHE[key]
 
 
-def composite_player_car(scene_img: np.ndarray, sprite: Image.Image, width_frac: float = 0.31,
-                         bottom_margin: int = 34) -> tuple[np.ndarray, Image.Image]:
-    """Paste the car sprite at the bottom-center. Returns (final RGB, RGBA car+shadow layer)."""
-    H, W = scene_img.shape[:2]
+def car_placement(sprite_w: int, sprite_h: int, W: int = OUT_W, H: int = OUT_H,
+                  width_frac: float = CAR_WIDTH_FRAC, bottom_margin: int = CAR_BOTTOM_MARGIN):
+    """(x0, y0, cw, ch): where the tight-cropped sprite is pasted, and its size."""
     cw = int(W * width_frac)
-    ch = int(sprite.height * cw / sprite.width)
-    car = sprite.resize((cw, ch), Image.LANCZOS)
-    x0 = (W - cw) // 2
-    y0 = H - bottom_margin - ch
+    ch = int(sprite_h * cw / sprite_w)
+    return (W - cw) // 2, H - bottom_margin - ch, cw, ch
 
-    # Light color matching: pull car brightness/contrast toward the road below it.
-    rgb = np.asarray(car.convert("RGB")).astype(np.float32)
-    a = np.asarray(car.getchannel("A")).astype(np.float32) / 255.0
+
+def car_color_match(scene_img: np.ndarray, car_rgb: np.ndarray, car_a: np.ndarray,
+                    x0: int, y0: int, cw: int, ch: int):
+    """Light color matching parameters (gain, tint) that pull the car's
+    brightness toward the road below it.  `car_a` is alpha in [0, 1]."""
+    H = scene_img.shape[0]
     region = scene_img[max(0, y0 - ch // 2):H, x0:x0 + cw].astype(np.float32)
     scene_lum = region.mean()
-    car_lum = (rgb.mean(-1) * a).sum() / max(a.sum(), 1)
+    car_lum = (car_rgb.mean(-1) * car_a).sum() / max(car_a.sum(), 1)
     gain = float(np.clip((scene_lum / max(car_lum, 1)) ** 0.25, 0.85, 1.12))
-    rgb = np.clip((rgb - 128) * 0.95 + 128, 0, 255) * gain
     # Slight tint toward the scene's average color (ambient bounce).
     tint = region.reshape(-1, 3).mean(0) / max(region.mean(), 1)
-    rgb = np.clip(rgb * (0.9 + 0.1 * tint), 0, 255)
-    car = Image.fromarray(np.dstack([rgb, a * 255]).astype(np.uint8), "RGBA")
+    return gain, tint
 
-    base = Image.fromarray(scene_img).convert("RGBA")
-    # Soft contact shadow: a dark blurred ellipse under the wheels plus a
-    # tighter, darker core right below the body.
-    shadow = Image.new("L", (W, H), 0)
+
+def apply_car_color(car_rgb: np.ndarray, gain: float, tint: np.ndarray) -> np.ndarray:
+    rgb = np.clip((car_rgb - 128) * 0.95 + 128, 0, 255) * gain
+    return np.clip(rgb * (0.9 + 0.1 * tint), 0, 255)
+
+
+def contact_shadow(x0: int, y0: int, cw: int, ch: int, W: int = OUT_W, H: int = OUT_H) -> Image.Image:
+    """Soft contact shadow alpha ("L"): a dark blurred ellipse under the wheels
+    plus a tighter, darker core right below the body."""
     sh = np.zeros((H, W), np.uint8)
     cx, cy = W // 2, y0 + ch - int(0.04 * ch)
     cv2.ellipse(sh, (cx, cy), (int(cw * 0.56), int(ch * 0.14)), 0, 0, 360, 150, -1)
     cv2.ellipse(sh, (cx, cy), (int(cw * 0.47), int(ch * 0.07)), 0, 0, 360, 220, -1)
     shadow = Image.fromarray(sh).filter(ImageFilter.GaussianBlur(radius=max(6, cw // 40)))
-    shadow_alpha = shadow.point(lambda v: int(v * 0.75))
-    # Player layer (shadow + car) as straight-alpha RGBA, so downstream code can
-    # re-composite the car on every generated video frame.
-    layer = Image.new("RGBA", (W, H), (10, 10, 12, 0))
+    return shadow.point(lambda v: int(v * 0.75))
+
+
+def player_layer(car: Image.Image, shadow_alpha: Image.Image, offset=(0, 0)) -> Image.Image:
+    """Player layer (shadow + car) as straight-alpha RGBA, so downstream code can
+    re-composite the car on every generated video frame."""
+    layer = Image.new("RGBA", shadow_alpha.size, (10, 10, 12, 0))
     layer.putalpha(shadow_alpha)
-    layer.alpha_composite(car, (x0, y0))
+    layer.alpha_composite(car, offset)
+    return layer
+
+
+def composite_player_car(scene_img: np.ndarray, sprite: Image.Image) -> tuple[np.ndarray, Image.Image]:
+    """Paste the car sprite at the bottom-center. Returns (final RGB, RGBA car+shadow layer)."""
+    H, W = scene_img.shape[:2]
+    x0, y0, cw, ch = car_placement(sprite.width, sprite.height, W, H)
+    car = sprite.resize((cw, ch), Image.LANCZOS)
+    rgb = np.asarray(car.convert("RGB")).astype(np.float32)
+    a = np.asarray(car.getchannel("A")).astype(np.float32) / 255.0
+    rgb = apply_car_color(rgb, *car_color_match(scene_img, rgb, a, x0, y0, cw, ch))
+    car = Image.fromarray(np.dstack([rgb, a * 255]).astype(np.uint8), "RGBA")
+
+    layer = player_layer(car, contact_shadow(x0, y0, cw, ch, W, H), (x0, y0))
+    base = Image.fromarray(scene_img).convert("RGBA")
     base.alpha_composite(layer)
     return np.asarray(base.convert("RGB")), layer
 

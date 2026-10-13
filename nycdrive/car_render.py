@@ -120,33 +120,65 @@ def _look_at(eye, target, up=(0, 1, 0)):
     return M
 
 
-def render_car(path: str, yaw_deg: float = 0.0, view_yaw_deg: float = 0.0,
-               size: int = 1024, cam_height: float = 0.55, cam_dist: float = 1.6,
-               fov_deg: float = 40.0) -> Image.Image:
-    """Render the car (unit length, front -> -Z) from a camera orbiting at
-    `view_yaw_deg` (0 = directly behind).  Returns a tight-cropped RGBA image."""
-    import pyrender
-
-    meshes, ext = _load_normalized_scene(path, yaw_deg)
-    scene = pyrender.Scene(bg_color=[0, 0, 0, 0], ambient_light=[0.45, 0.45, 0.45])
-    for m in meshes:
-        scene.add(m)
+def chase_camera_pose(ext, cam_height: float = 0.55, cam_dist: float = 1.6,
+                      view_yaw_deg: float = 0.0) -> np.ndarray:
+    """Camera-to-world pose orbiting the (unit length, front -> -Z) car at
+    `view_yaw_deg` (0 = directly behind), aimed a bit above the ground."""
     a = np.radians(view_yaw_deg)
     eye = np.array([np.sin(a) * cam_dist, cam_height, np.cos(a) * cam_dist])
     target = np.array([0.0, ext[1] * 0.35, 0.0])
-    cam = pyrender.PerspectiveCamera(yfov=np.radians(fov_deg))
-    scene.add(cam, pose=_look_at(eye, target))
+    return _look_at(eye, target)
+
+
+def build_car_scene(meshes):
+    """pyrender scene with the car meshes under a single "car" node (so the
+    whole car can be re-posed, e.g. yawed, with `scene.set_pose`) and
+    world-fixed lights.  Returns (scene, car_node); no camera yet."""
+    import pyrender
+
+    scene = pyrender.Scene(bg_color=[0, 0, 0, 0], ambient_light=[0.45, 0.45, 0.45])
+    car_node = pyrender.Node(name="car", matrix=np.eye(4))
+    scene.add_node(car_node)
+    for m in meshes:
+        scene.add(m, parent_node=car_node)
     # Key light from above/behind the camera, fill lights from the sides.
     for d, inten in [((0.3, 1.0, 0.8), 3.5), ((-0.8, 0.6, -0.3), 1.5),
                      ((0.8, 0.5, -0.4), 1.2), ((0, -0.2, 1.0), 0.8)]:
         d = np.asarray(d, float)
         scene.add(pyrender.DirectionalLight(color=np.ones(3), intensity=inten),
                   pose=_look_at(d * 5, np.zeros(3)))
+    return scene, car_node
+
+
+def render_car_frame(path: str, yaw_deg: float = 0.0, view_yaw_deg: float = 0.0,
+                     size: int = 1024, cam_height: float = 0.55, cam_dist: float = 1.6,
+                     fov_deg: float = 40.0) -> np.ndarray:
+    """Full (uncropped) size x size RGBA render; see `render_car`."""
+    import pyrender
+
+    meshes, ext = _load_normalized_scene(path, yaw_deg)
+    scene, _ = build_car_scene(meshes)
+    cam = pyrender.PerspectiveCamera(yfov=np.radians(fov_deg))
+    scene.add(cam, pose=chase_camera_pose(ext, cam_height, cam_dist, view_yaw_deg))
     r = pyrender.OffscreenRenderer(size, size)
     color, _ = r.render(scene, flags=pyrender.RenderFlags.RGBA)
     r.delete()
-    img = Image.fromarray(color, "RGBA")
-    bbox = img.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox()
+    return color
+
+
+def alpha_bbox(img: Image.Image, thresh: int = 8):
+    """(left, top, right, bottom) of the pixels with alpha > thresh, or None."""
+    return img.getchannel("A").point(lambda v: 255 if v > thresh else 0).getbbox()
+
+
+def render_car(path: str, yaw_deg: float = 0.0, view_yaw_deg: float = 0.0,
+               size: int = 1024, cam_height: float = 0.55, cam_dist: float = 1.6,
+               fov_deg: float = 40.0) -> Image.Image:
+    """Render the car (unit length, front -> -Z) from a camera orbiting at
+    `view_yaw_deg` (0 = directly behind).  Returns a tight-cropped RGBA image."""
+    img = Image.fromarray(render_car_frame(path, yaw_deg, view_yaw_deg, size, cam_height,
+                                           cam_dist, fov_deg), "RGBA")
+    bbox = alpha_bbox(img)
     return img.crop(bbox) if bbox else img
 
 
