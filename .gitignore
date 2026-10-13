@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+checkpoints/
+third_party/
+outputs/
+data/cache/
+data/meshes/
+data/inputs/*/raw_pano*
+*.glb
+.claude/
+data/
