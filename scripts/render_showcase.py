@@ -45,6 +45,7 @@ def main():
             else:
                 cmd = [sys.executable, "-m", "nycdrive.drive", "--num_iterations", str(j.get("num_iterations", args.num_iterations))]
             cmd += ["--scene", j["scene"], "--route", j["route"], "--seed", str(j.get("seed", 42)), "--save_name", name]
+            cmd += [str(x) for x in j.get("extra_args", [])]
             if j.get("label"):
                 cmd += ["--label", j["label"]]
             if j.get("prompt"):

@@ -29,22 +29,20 @@ from nycdrive.player import composite_player, load_car_sprites  # noqa: E402
 from nycdrive.vehicle import (FPS, MG3_YAW_DEG_PER_UNIT, VehicleParams, route_controls,  # noqa: E402
                               simulate, to_mg3)
 
-CAM_ALPHA = 1.0 - np.exp(-1.0 / (FPS * VehicleParams.cam_lag))
-
-
 def num_frames_for(num_iterations: int) -> int:
     return 57 + (num_iterations - 1) * 40
 
 
-def rel_yaw_from_mouse(mouse: np.ndarray) -> np.ndarray:
-    """Vehicle yaw relative to the chase camera (deg). With psi_cam' = alpha * (psi - psi_cam),
-    psi - psi_cam = psi_cam' / alpha; psi_cam' is the (low-passed) MG3 yaw command."""
+def rel_yaw_from_mouse(mouse: np.ndarray, fps: float = FPS) -> np.ndarray:
+    """Vehicle yaw relative to the chase camera (deg). With psi_cam[t+1] - psi_cam[t] = alpha * (psi - psi_cam),
+    psi - psi_cam = (per-frame camera yaw) / alpha; the per-frame yaw is the (low-passed) MG3 yaw command."""
+    alpha = 1.0 - np.exp(-1.0 / (fps * VehicleParams.cam_lag))
     rate = mouse[:, 1] * MG3_YAW_DEG_PER_UNIT
-    k = 1.0 - np.exp(-1.0 / (0.2 * FPS))
+    k = 1.0 - np.exp(-1.0 / (0.2 * fps))
     smooth = np.zeros_like(rate)
     for i in range(1, len(rate)):
         smooth[i] = smooth[i - 1] + k * (rate[i] - smooth[i - 1])
-    return smooth / CAM_ALPHA
+    return smooth / alpha
 
 
 def driving_action():
@@ -61,19 +59,23 @@ def driving_action():
     return {"mouse": torch.tensor([0.0, yaw]), "keyboard": torch.tensor(keyboard)}
 
 
-def make_saver(label, sprites, sim=None):
+def make_saver(label, sprites, sim=None, stride=1):
+    """Replacement for MG3's process_video. With stride k, every k-th generated frame is kept
+    (the controller runs at k * FPS, so on-screen timing of manoeuvres is preserved)."""
     def save(input_video, output_video, config, *_, **__):
         keyboard, mouse = (np.asarray(c) for c in config)
         frames = np.asarray(input_video).astype(np.uint8)
         base = os.path.splitext(output_video)[0]
-        np.savez(base + "_actions.npz", keyboard=keyboard, mouse=mouse)
+        rel_yaw = rel_yaw_from_mouse(mouse, fps=FPS * stride)
+        np.savez(base + "_actions.npz", keyboard=keyboard, mouse=mouse, rel_yaw=rel_yaw, stride=stride,
+                 controls=sim["controls"] if sim is not None else np.zeros((0, 2)))
+        frames, keyboard, rel_yaw = frames[::stride], keyboard[::stride], rel_yaw[::stride]
         imageio.mimwrite(base + "_world.mp4", frames, fps=FPS, quality=8, macro_block_size=None)
-        rel_yaw = rel_yaw_from_mouse(mouse)
         if sprites is not None:
             frames = composite_player(frames, rel_yaw, sprites, moving=keyboard[:, 0] > 0.5)
         imageio.mimwrite(base + "_clean.mp4", frames, fps=FPS, quality=8, macro_block_size=None)
         if sim is not None:
-            controls = sim["controls"]
+            controls = sim["controls"][::stride]
         else:  # interactive: reconstruct inputs from the issued actions
             controls = np.stack([keyboard[:, 0] - keyboard[:, 1], np.clip(mouse[:, 1] / 0.06, -1, 1)], 1)
         # no speed readout: MG3's realised speed is fixed by the model, not by the controller
@@ -95,6 +97,8 @@ def main():
     p.add_argument("--label", default=None)
     p.add_argument("--condition", default="inpainted.png", help="conditioning frame in the scene dir")
     p.add_argument("--no_player", action="store_true")
+    p.add_argument("--frame_stride", type=int, default=1,
+                   help="keep every k-th generated frame (k x apparent speed); controller runs at k * 17 Hz")
     p.add_argument("--ckpt_dir", default=str(ROOT / "checkpoints" / "Matrix-Game-3.0"))
     p.add_argument("--output_dir", default=str(ROOT / "outputs" / "videos"))
     p.add_argument("--save_name", default=None)
@@ -113,7 +117,8 @@ def main():
     cond = scene / args.condition if (scene / args.condition).exists() else scene / "image.png"
 
     n = num_frames_for(args.num_iterations)
-    sim = None if args.interactive else simulate(route_controls(route, n, fps=FPS), fps=FPS)
+    k = 1 if args.interactive else args.frame_stride
+    sim = None if args.interactive else simulate(route_controls(route, n, fps=FPS * k), fps=FPS * k)
 
     os.chdir(MG3_DIR)
     import utils.utils as mg_utils
@@ -122,10 +127,10 @@ def main():
     import generate as mg_generate
 
     if sim is not None:
-        actions = to_mg3(sim, fps=FPS)
+        actions = to_mg3(sim, fps=FPS * k)
         mg_utils.Bench_actions_universal = lambda num_frames, **_: {k: v[:num_frames] for k, v in actions.items()}
     mg_ipipe.get_current_action = driving_action
-    saver = make_saver(label, sprites, sim)
+    saver = make_saver(label, sprites, sim, stride=k)
     mg_pipe.process_video = saver
     mg_ipipe.process_video = saver
 

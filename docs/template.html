@@ -4,147 +4,555 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Matrix New York</title>
-<meta name="description" content="Street View initial observations and a kinematic vehicle controller for action-conditioned video world models (Matrix-Game-2.0 GTA-drive, Matrix-Game-3.0) in New York City.">
+<meta name="description" content="Street View initial observations and vehicle control for interactive video world models. Driving Matrix-Game-3.0 through New York City from a single street-level frame.">
+<meta property="og:title" content="Matrix New York">
+<meta property="og:description" content="Street View initial observations and vehicle control for interactive video world models.">
+<meta property="og:image" content="{{OG_IMAGE}}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
-  onload="renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}]})"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <style>
-  :root { --bg:#fff; --fg:#1b1b1b; --muted:#5f6368; --rule:#dadce0; --link:#1a5fb4; --code:#f4f5f6; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg:#141516; --fg:#e6e6e6; --muted:#a0a4a8; --rule:#3a3d40; --link:#8ab4f8; --code:#1f2123; }
-  }
-  * { box-sizing: border-box; }
-  html, body { margin:0; background:var(--bg); color:var(--fg); }
-  body { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-  main { max-width: 960px; margin: 0 auto; padding: 40px 16px 80px; }
-  a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
-  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 6px; font-weight: 700; letter-spacing: -0.01em; }
-  .subtitle { font-size: 19px; color: var(--muted); margin: 0 0 14px; }
-  .meta { font-size: 15px; margin-bottom: 28px; }
-  .meta a { margin-right: 14px; }
-  h2 { font-size: 22px; margin: 44px 0 10px; padding-top: 8px; border-top: 1px solid var(--rule); }
-  h3 { font-size: 17px; margin: 26px 0 8px; }
-  p, li { max-width: 78ch; }
-  ul { padding-left: 20px; }
-  code { font: 13.5px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--code); padding: 1px 4px; border-radius: 3px; overflow-wrap: anywhere; }
-  pre code { overflow-wrap: normal; }
-  .katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
-  .tablewrap { overflow-x: auto; }
-  pre { background: var(--code); padding: 14px 16px; overflow-x: auto; border-radius: 4px; }
-  pre code { background: none; padding: 0; }
-  figure { margin: 18px 0; }
-  figcaption { font-size: 13.5px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
-  video, img { width: 100%; display: block; background: #000; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 14px; }
-  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .pair figcaption b, .grid2 figcaption b { color: var(--fg); font-weight: 600; }
-  table { border-collapse: collapse; width: 100%; font-size: 14.5px; margin: 12px 0; }
-  th, td { text-align: left; vertical-align: top; padding: 6px 10px 6px 0; }
-  thead th { border-top: 1.5px solid var(--fg); border-bottom: 1px solid var(--fg); font-weight: 600; }
-  tbody tr:last-child td { border-bottom: 1.5px solid var(--fg); }
-  .note { font-size: 14px; color: var(--muted); }
-  .refs li { font-size: 14px; margin-bottom: 4px; }
-  @media (max-width: 720px) { .grid2, .pair { grid-template-columns: 1fr; } .grid4 { grid-template-columns: 1fr 1fr; } h1 { font-size: 28px; } }
+:root {
+  --bg: #07080a; --bg2: #0c0e12; --surface: #111419; --surface2: #171b22; --line: rgba(255,255,255,.08); --line2: rgba(255,255,255,.14);
+  --text: #eceef1; --muted: #9ba1ab; --faint: #6b717c;
+  --accent: #ffc928; --accent-ink: #1a1400; --cyan: #5cc8ff; --red: #ff5d5d;
+  --radius: 14px; --maxw: 1200px;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Inter Tight", "Inter", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body { font: 16px/1.65 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+img, video { display: block; max-width: 100%; }
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+/* nav */
+nav.top { position: fixed; inset: 0 0 auto 0; z-index: 1000; height: 60px; display: flex; align-items: center;
+  background: rgba(7,8,10,.55); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid transparent; transition: border-color .2s, background .2s; }
+nav.top.scrolled { border-bottom-color: var(--line); background: rgba(7,8,10,.84); }
+nav.top .wrap { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.brand { font: 700 15px/1 var(--display); letter-spacing: .02em; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+.brand i { width: 10px; height: 10px; border-radius: 2px; background: var(--accent); display: inline-block; }
+nav.top ul { list-style: none; display: flex; gap: 26px; margin: 0; padding: 0; }
+nav.top ul a { text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 500; transition: color .15s; }
+nav.top ul a:hover { color: var(--text); }
+.gh { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 13px; font-weight: 600;
+  border: 1px solid var(--line2); padding: 7px 12px; border-radius: 999px; }
+.gh:hover { border-color: var(--text); }
+
+/* hero */
+header.hero { position: relative; height: min(100vh, 900px); min-height: 560px; overflow: hidden; }
+header.hero video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+header.hero::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(7,8,10,.55) 0%, rgba(7,8,10,0) 22%, rgba(7,8,10,0) 45%, rgba(7,8,10,.85) 82%, var(--bg) 100%),
+              radial-gradient(120% 80% at 50% 50%, transparent 55%, rgba(0,0,0,.45) 100%); }
+.hero-inner { position: absolute; inset: auto 0 0 0; z-index: 2; padding-bottom: 56px; }
+.eyebrow { font: 600 12px/1.5 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 800 clamp(44px, 8vw, 104px)/.92 var(--display); letter-spacing: -.035em; margin: 14px 0 18px; }
+.hero .lede { font-size: clamp(17px, 2vw, 21px); line-height: 1.5; max-width: 720px; color: #d7dae0; margin: 0 0 22px; }
+.authors { font-size: 15px; color: var(--muted); margin-bottom: 22px; }
+.authors b { color: var(--text); font-weight: 600; }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-flex; align-items: center; gap: 9px; height: 42px; padding: 0 16px; border-radius: 10px; text-decoration: none;
+  font-size: 14px; font-weight: 600; border: 1px solid var(--line2); background: rgba(255,255,255,.04); backdrop-filter: blur(6px); }
+.btn:hover { background: rgba(255,255,255,.09); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn svg { width: 17px; height: 17px; }
+.hero-cap { position: absolute; right: 24px; bottom: 22px; z-index: 2; font: 500 11.5px/1.4 var(--mono); color: rgba(255,255,255,.62); text-align: right; max-width: 380px; }
+
+/* sections */
+section { padding: 96px 0 0; }
+.sec-head { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 30px; }
+h2 { font: 700 clamp(28px, 3.6vw, 42px)/1.08 var(--display); letter-spacing: -.02em; margin: 0; }
+h3 { font: 650 20px/1.3 var(--display); letter-spacing: -.01em; margin: 44px 0 12px; }
+p { margin: 0 0 14px; }
+.prose { max-width: 760px; color: #cfd3d9; }
+.prose b { color: var(--text); font-weight: 600; }
+.note { font-size: 13px; color: var(--muted); }
+code { font: 500 .86em/1.4 var(--mono); background: rgba(255,255,255,.06); border: 1px solid var(--line); padding: 1px 6px; border-radius: 5px; overflow-wrap: anywhere; }
+
+/* abstract + stats */
+.abstract { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 56px; align-items: start; }
+.abstract p { font-size: 18px; line-height: 1.7; color: #d4d8de; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.stat { background: var(--bg2); padding: 22px 22px 20px; }
+.stat .v { font: 700 34px/1 var(--display); letter-spacing: -.02em; }
+.stat .v small { font-size: 16px; color: var(--muted); font-weight: 600; margin-left: 3px; }
+.stat .k { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+
+/* explorer */
+.explorer { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 18px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+#map { height: 300px; background: #0b0d10; z-index: 0; }
+.leaflet-container { font-family: var(--sans); }
+.leaflet-control-attribution { background: rgba(7,8,10,.7) !important; color: var(--faint) !important; font-size: 10px !important; }
+.leaflet-control-attribution a { color: var(--muted) !important; }
+.pin { width: 26px; height: 26px; border-radius: 50%; background: #1d222b; border: 2px solid #3a414d; color: var(--text);
+  font: 600 11px/22px var(--mono); text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,.5); transition: all .15s; }
+.pin.on { background: var(--accent); border-color: #fff; color: var(--accent-ink); transform: scale(1.15); }
+.scene-list { max-height: 330px; overflow-y: auto; padding: 6px; }
+.scene { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; width: 100%; text-align: left;
+  background: none; border: 0; color: var(--text); padding: 9px 10px; border-radius: 9px; cursor: pointer; font: inherit; }
+.scene:hover { background: rgba(255,255,255,.04); }
+.scene.on { background: rgba(255,201,40,.10); }
+.scene .n { font: 600 11px var(--mono); color: var(--faint); }
+.scene.on .n { color: var(--accent); }
+.scene .t { font-size: 14px; font-weight: 550; line-height: 1.3; }
+.scene .r { font: 500 11px var(--mono); color: var(--muted); border: 1px solid var(--line2); padding: 2px 7px; border-radius: 999px; }
+.player video { width: 100%; aspect-ratio: 1280/704; background: #000; }
+.tele { display: grid; grid-template-columns: auto auto 1fr; gap: 22px; align-items: center; padding: 16px 18px; border-top: 1px solid var(--line); }
+.wheel { width: 64px; height: 64px; }
+#wheel { transform-origin: 32px 32px; transform-box: view-box; }
+.pedals { display: flex; gap: 10px; align-items: flex-end; height: 64px; }
+.pedal { width: 12px; height: 64px; background: rgba(255,255,255,.07); border-radius: 4px; position: relative; overflow: hidden; }
+.pedal span { position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-radius: 4px; }
+.pedal.thr span { background: var(--accent); } .pedal.brk span { background: var(--red); }
+.pedal-l { font: 500 10px var(--mono); color: var(--faint); text-align: center; margin-top: 4px; }
+.trace { min-width: 0; }
+.trace .lbl { display: flex; justify-content: space-between; font: 500 11px var(--mono); color: var(--muted); margin-bottom: 6px; gap: 10px; flex-wrap: wrap; }
+.trace svg { width: 100%; height: 44px; display: block; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 12px 18px 16px; border-top: 1px solid var(--line); font: 500 12px var(--mono); color: var(--muted); }
+.meta-row b { color: var(--text); font-weight: 600; }
+
+/* figures */
+figure { margin: 0; }
+figcaption { font-size: 13.5px; line-height: 1.55; color: var(--muted); margin-top: 12px; max-width: 900px; }
+figcaption b { color: var(--text); font-weight: 600; }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.step { position: relative; }
+.step img { border-radius: 10px; border: 1px solid var(--line); aspect-ratio: 1280/704; object-fit: cover; width: 100%; }
+.step .cap { font-size: 13px; color: var(--muted); margin-top: 10px; line-height: 1.45; }
+.step .cap b { display: block; font: 600 11px var(--mono); color: var(--accent); letter-spacing: .08em; margin-bottom: 3px; }
+.step:not(:last-child)::after { content: ""; position: absolute; right: -12px; top: calc(27.5% - 5px); width: 8px; height: 8px;
+  border-top: 2px solid var(--faint); border-right: 2px solid var(--faint); transform: rotate(45deg); }
+.compare { position: relative; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); user-select: none; aspect-ratio: 1280/704; }
+.compare img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.compare .top { clip-path: inset(0 0 0 50%); }
+.compare .bar { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: #fff; transform: translateX(-1px); pointer-events: none; }
+.compare .bar::after { content: "◂ ▸"; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; color: #000;
+  font: 700 11px var(--mono); padding: 7px 8px; border-radius: 999px; white-space: nowrap; }
+.compare input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; margin: 0; }
+.compare .tag { position: absolute; top: 12px; font: 600 11px var(--mono); background: rgba(0,0,0,.6); padding: 5px 8px; border-radius: 6px; letter-spacing: .06em; }
+.diagram { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; overflow-x: auto; }
+.diagram svg { min-width: 760px; width: 100%; height: auto; display: block; }
+.eq { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 18px; overflow-x: auto; margin: 18px 0; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+td.num { font-family: var(--mono); color: var(--text); white-space: nowrap; }
+.tablewrap { overflow-x: auto; }
+
+/* gallery */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.chip { font: 600 12.5px var(--sans); color: var(--muted); background: var(--surface); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; cursor: pointer; }
+.chip:hover { color: var(--text); }
+.chip[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .15s, transform .15s; }
+.card:hover { border-color: var(--line2); transform: translateY(-2px); }
+.card video { width: 100%; aspect-ratio: 1280/704; object-fit: cover; background: #000; }
+.card .body { padding: 13px 15px 15px; }
+.card .t { font-weight: 600; font-size: 15px; }
+.card .s { font: 500 11.5px var(--mono); color: var(--muted); margin-top: 4px; }
+
+/* ablation strip */
+.strip { display: grid; grid-template-columns: 130px repeat(4, minmax(0, 1fr)); gap: 8px; align-items: center; }
+.strip img { border-radius: 8px; border: 1px solid var(--line); width: 100%; aspect-ratio: 1280/704; object-fit: cover; }
+.strip .rl { font: 600 12px/1.35 var(--mono); color: var(--muted); }
+.strip .rl b { color: var(--text); display: block; }
+.strip .ch { font: 500 11px var(--mono); color: var(--faint); text-align: center; }
+
+.lim { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.lim div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; font-size: 14.5px; color: #cfd3d9; }
+.lim div b { display: block; color: var(--text); margin-bottom: 4px; font-weight: 600; }
+
+pre.bib { position: relative; background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; overflow-x: auto;
+  font: 13px/1.6 var(--mono); color: #cfd3d9; margin: 0; }
+.copy { position: absolute; top: 12px; right: 12px; font: 600 12px var(--sans); background: var(--surface2); color: var(--text); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+footer { margin-top: 110px; border-top: 1px solid var(--line); padding: 40px 0 70px; color: var(--muted); font-size: 13.5px; }
+footer .cols { display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; }
+footer ol { margin: 0; padding-left: 18px; } footer li { margin-bottom: 6px; }
+footer a { color: #c9cdd3; }
+
+@media (max-width: 1000px) {
+  .abstract { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .explorer { grid-template-columns: minmax(0, 1fr); }
+  .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .two { grid-template-columns: minmax(0, 1fr); }
+  nav.top ul { display: none; }
+}
+@media (max-width: 640px) {
+  .wrap { padding: 0 16px; }
+  section { padding-top: 72px; }
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .step::after { display: none; }
+  .gallery { grid-template-columns: minmax(0, 1fr); }
+  .lim { grid-template-columns: minmax(0, 1fr); }
+  .strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .stat .v { font-size: 28px; }
+  .strip .rl { grid-column: 1 / -1; }
+  .strip .corner { display: none; }
+  .tele { grid-template-columns: auto auto; }
+  .trace { grid-column: 1 / -1; }
+  .hero-cap { display: none; }
+  footer .cols { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
+
+<nav class="top" id="nav">
+  <div class="wrap">
+    <a class="brand" href="#"><i></i>Matrix New York</a>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#explorer">Explorer</a></li>
+      <li><a href="#method">Method</a></li>
+      <li><a href="#results">Results</a></li>
+      <li><a href="#analysis">Analysis</a></li>
+      <li><a href="#citation">Citation</a></li>
+    </ul>
+    <a class="gh" href="https://github.com/mkturkcan/matrix-new-york">
+      <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<header class="hero">
+  <video src="{{HERO_SRC}}" poster="{{HERO_POSTER}}" autoplay muted loop playsinline></video>
+  <div class="hero-inner"><div class="wrap">
+    <div class="eyebrow">Interactive video world models · New York City</div>
+    <h1>Matrix New York</h1>
+    <p class="lede">Street View initial observations and vehicle control for interactive video world models.</p>
+    <div class="authors"><b>Mehmet Kerem Turkcan</b></div>
+    <div class="btns">
+      <a class="btn primary" href="https://github.com/mkturkcan/matrix-new-york">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Code</a>
+      <a class="btn" href="#explorer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>Rollouts</a>
+      <a class="btn" href="https://github.com/mkturkcan/matrix-new-york/releases">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Release</a>
+      <a class="btn" href="https://huggingface.co/Skywork/Matrix-Game-3.0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12h8M12 8v8"/></svg>Matrix-Game-3.0</a>
+    </div>
+  </div></div>
+  <div class="hero-cap">{{HERO_CAPTION}}</div>
+</header>
+
 <main>
+<section id="overview"><div class="wrap">
+  <div class="abstract">
+    <div>
+      <div class="eyebrow" style="margin-bottom:14px">Abstract</div>
+      <p>We drive a pretrained action-conditioned video world model through New York City starting from street-level imagery. For a query location we retrieve the nearest Google Street View panorama, reproject it along the capture heading, remove near-field vehicles, and insert a 3D vehicle rendered under a chase camera. A kinematic bicycle model converts throttle and steering into Matrix-Game-3.0 keyboard and camera-yaw actions. Because the model is first-person, we condition it on the vehicle-free frame and composite the ego vehicle from renders indexed by the controller's yaw relative to the camera. The pipeline requires no fine-tuning and runs on a single GPU.</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="v">1</div><div class="k">Street View frame observed per rollout</div></div>
+      <div class="stat"><div class="v">704×1280</div><div class="k">output resolution at 17 fps</div></div>
+      <div class="stat"><div class="v">48<small>s</small></div><div class="k">generated per clip; shown at 2× (every second frame)</div></div>
+      <div class="stat"><div class="v">0</div><div class="k">parameters fine-tuned</div></div>
+    </div>
+  </div>
+</div></section>
 
-<h1>Matrix New York</h1>
-<p class="subtitle">Driving through New York City in action-conditioned video world models</p>
-<div class="meta">
-  Mehmet Kerem Turkcan &nbsp;·&nbsp;
-  <a href="https://github.com/mkturkcan/matrix-new-york">Code</a>
-  <a href="https://github.com/mkturkcan/matrix-new-york/releases">Releases</a>
-</div>
+<section id="explorer"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">Interactive</div>
+    <h2>Scene explorer</h2>
+    <p class="prose">Select a location to play its rollout. The telemetry panel shows the controller input issued to the model at the displayed frame.</p>
+  </div>
+  <div class="explorer">
+    <div class="panel">
+      <div id="map" role="img" aria-label="Map of rollout locations in New York City"></div>
+      <div class="scene-list" id="scenes"></div>
+    </div>
+    <div class="panel player">
+      <video id="pv" muted playsinline loop controls preload="metadata"></video>
+      <div class="tele">
+        <svg class="wheel" viewBox="0 0 64 64" aria-label="steering">
+          <g id="wheel"><circle cx="32" cy="32" r="27" fill="none" stroke="#e9ebee" stroke-width="5"/>
+            <circle cx="32" cy="32" r="6" fill="#e9ebee"/>
+            <path d="M5 32 H26 M38 32 H59 M32 38 V59" stroke="#e9ebee" stroke-width="5" stroke-linecap="round"/>
+            <rect x="29" y="2" width="6" height="7" rx="1.5" fill="#ffc928"/></g>
+        </svg>
+        <div>
+          <div class="pedals"><div class="pedal thr"><span id="thr"></span></div><div class="pedal brk"><span id="brk"></span></div></div>
+          <div class="pedal-l">THR BRK</div>
+        </div>
+        <div class="trace">
+          <div class="lbl"><span>STEERING INPUT</span><span id="tlabel">t = 0.0 s</span></div>
+          <svg viewBox="0 0 400 44" preserveAspectRatio="none" id="trace">
+            <line x1="0" y1="22" x2="400" y2="22" stroke="rgba(255,255,255,.12)"/>
+            <path id="trpath" fill="none" stroke="#5cc8ff" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+            <line id="playhead" x1="0" y1="0" x2="0" y2="44" stroke="#ffc928" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+          </svg>
+        </div>
+      </div>
+      <div class="meta-row" id="meta"></div>
+    </div>
+  </div>
+</div></section>
 
-<figure>
-  <video src="{{HERO_SRC}}" autoplay muted loop playsinline controls></video>
-  <figcaption>{{HERO_CAPTION}}</figcaption>
-</figure>
+<section id="method"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">Method</div>
+    <h2>From a panorama to a drivable rollout</h2>
+  </div>
 
-<h2>Overview</h2>
-<p>We build initial observations for pretrained interactive video world models from Google Street View panoramas of New York City, and drive the models with a kinematic vehicle controller. For a query location we retrieve the nearest panorama captured by a Google Street View car and reproject it to a 1280×704 perspective view along the capture heading. We then remove near-field vehicles (Mask2Former segmentation, LaMa inpainting) and insert a vehicle mesh from MeshFleet rendered under a chase camera. Driver inputs (throttle, steering) are integrated by a kinematic bicycle model and mapped to the action spaces of two pretrained models: the Matrix-Game-2.0 GTA-drive checkpoint, a third-person driving model trained on GTA V, and Matrix-Game-3.0, a first-person model. No model is fine-tuned.</p>
-<ul>
-  <li><b>Matrix-Game-2.0 GTA-drive</b> carries the inserted vehicle forward and produces non-holonomic motion: steering changes the vehicle's heading rather than translating it sideways, at speeds comparable to the source game. The scene, and to a lesser degree the vehicle, drift toward the GTA V appearance distribution after roughly 8–12 s, and the model reproduces the game's minimap in the lower-left corner.</li>
-  <li><b>Matrix-Game-3.0</b> keeps the photographic appearance of the initial frame for longer, at 704×1280, but has no notion of an ego vehicle. A vehicle in the conditioning frame is treated as static scene content and passed through within ~1 s. We therefore condition it on the vehicle-free frame and draw the vehicle from renders indexed by the controller's yaw relative to the camera. Its forward speed is fixed by the model and cannot be raised through the action interface (see Limitations).</li>
-  <li>Each clip runs on a single RTX PRO 6000 (Blackwell). Measured throughput after model load is ≈18 frames/s at 352×640 for Matrix-Game-2.0 GTA-drive and ≈3.6 frames/s at 704×1280 for Matrix-Game-3.0 (bf16, no int8, synchronous VAE).</li>
-</ul>
+  <h3>Initial observation</h3>
+  <div class="steps">{{STEPS}}</div>
+  <p class="prose" style="margin-top:22px">Panoramas are retrieved through Street View coverage tiles, which list only captures from Google's own vehicles, and downloaded at zoom 4 (zoom 3 if tiles are missing). The view is an equirectangular-to-perspective remap with yaw equal to the capture heading, pitch −3°, and 90° horizontal FOV. Near-field vehicles are segmented with Mask2Former (Swin-L, Cityscapes classes car, truck, bus, train, motorcycle, bicycle). A component is removed if it lies in the ego lane ahead, touches the bottom of the frame, or overlaps the inserted vehicle; parked vehicles at the sides are kept. Masks are dilated by 18 px, black no-data regions of the panorama are added, and LaMa fills the holes. The inserted vehicle is a CC-BY MeshFleet mesh rendered with pyrender from about two car lengths behind, composited at 31% of the image width with a contact shadow and a global gain/tint match.</p>
+  <figure style="margin-top:26px">
+    <div class="compare" id="cmp">
+      <img src="{{CMP_A}}" alt="Street View perspective view">
+      <img class="top" src="{{CMP_B}}" alt="Prepared initial observation">
+      <div class="bar"></div>
+      <span class="tag" style="left:12px">STREET VIEW</span><span class="tag" style="right:12px">PREPARED</span>
+      <input type="range" min="0" max="100" value="50" aria-label="Compare original and prepared frame">
+    </div>
+    <figcaption><b>Figure 1.</b> {{CMP_CAPTION}} Drag to compare the reprojected panorama with the prepared frame.</figcaption>
+  </figure>
 
-<h2>Results: Matrix-Game-2.0 GTA-drive</h2>
-<p class="note">Each clip has 297 frames at 12 fps (≈25 s), generated autoregressively from the single frame shown at t = 0. The model outputs 352×640; clips are upsampled 2× (Lanczos) for display. The overlay shows the controller state: W/S duty cycle, steering input, and simulated speed. Speed is the vehicle-model state, not an estimate from the video.</p>
-{{GTA_RESULTS}}
+  <h3>Vehicle model and action mapping</h3>
+  <figure class="diagram">
+    <svg viewBox="0 0 960 250" role="img" aria-label="Control diagram">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6b717c"/></marker></defs>
+      <g font-family="Inter, sans-serif" font-size="13" fill="#eceef1">
+        <rect x="10" y="40" width="150" height="64" rx="10" fill="#171b22" stroke="rgba(255,255,255,.14)"/>
+        <text x="85" y="66" text-anchor="middle" font-weight="600">Driver input</text>
+        <text x="85" y="86" text-anchor="middle" fill="#9ba1ab" font-family="JetBrains Mono" font-size="11.5">u, s ∈ [−1, 1]</text>
+        <rect x="200" y="40" width="170" height="64" rx="10" fill="#171b22" stroke="rgba(255,255,255,.14)"/>
+        <text x="285" y="66" text-anchor="middle" font-weight="600">Bicycle model</text>
+        <text x="285" y="86" text-anchor="middle" fill="#9ba1ab" font-family="JetBrains Mono" font-size="11.5">v, ψ</text>
+        <rect x="410" y="40" width="150" height="64" rx="10" fill="#171b22" stroke="rgba(255,255,255,.14)"/>
+        <text x="485" y="66" text-anchor="middle" font-weight="600">Chase camera</text>
+        <text x="485" y="86" text-anchor="middle" fill="#9ba1ab" font-family="JetBrains Mono" font-size="11.5">ψc, τc = 0.35 s</text>
+        <rect x="600" y="40" width="160" height="64" rx="10" fill="#171b22" stroke="rgba(255,255,255,.14)"/>
+        <text x="680" y="66" text-anchor="middle" font-weight="600">Action adapter</text>
+        <text x="680" y="86" text-anchor="middle" fill="#9ba1ab" font-family="JetBrains Mono" font-size="11.5">W duty, Δψc / 15°</text>
+        <rect x="800" y="30" width="150" height="84" rx="10" fill="rgba(255,201,40,.10)" stroke="#ffc928"/>
+        <text x="875" y="64" text-anchor="middle" font-weight="700">Matrix-Game-3.0</text>
+        <text x="875" y="84" text-anchor="middle" fill="#9ba1ab" font-family="JetBrains Mono" font-size="11.5">vehicle-free frame</text>
+        <rect x="410" y="160" width="150" height="64" rx="10" fill="#171b22" stroke="rgba(255,255,255,.14)"/>
+        <text x="485" y="186" text-anchor="middle" font-weight="600">Render bank</text>
+        <text x="485" y="206" text-anchor="middle" fill="#9ba1ab" font-family="JetBrains Mono" font-size="11.5">17 yaws, ±24°</text>
+        <rect x="800" y="160" width="150" height="64" rx="10" fill="#171b22" stroke="rgba(255,255,255,.14)"/>
+        <text x="875" y="186" text-anchor="middle" font-weight="600">Compositor</text>
+        <text x="875" y="206" text-anchor="middle" fill="#9ba1ab" font-family="JetBrains Mono" font-size="11.5">output frames</text>
+      </g>
+      <g stroke="#6b717c" stroke-width="1.6" fill="none" marker-end="url(#ar)">
+        <path d="M160 72H196"/><path d="M370 72H406"/><path d="M560 72H596"/><path d="M760 72H796"/>
+        <path d="M875 114V156"/><path d="M300 104V192H406"/><path d="M560 192H796"/>
+      </g>
+      <g font-family="JetBrains Mono" font-size="11" fill="#9ba1ab"><text x="312" y="150">ψ − ψc</text><text x="884" y="140">frames</text></g>
+    </svg>
+  </figure>
+  <div class="two" style="margin-top:22px">
+    <div>
+      <p class="prose">Inputs are throttle/brake \(u\in[-1,1]\) and steering \(s\in[-1,1]\) (low-pass, \(\tau=0.15\) s). A kinematic bicycle model with speed-dependent steering authority and a first-order chase camera integrates them:</p>
+      <div class="eq">\[\dot v = a^{+}u^{+} - a^{-}u^{-} - c\,v,\quad \delta=\frac{s\,\delta_{\max}}{1+v/v_{\mathrm{ref}}},\quad \dot\psi=\frac{v}{L}\tan\delta,\quad \dot\psi_c=\frac{\psi-\psi_c}{\tau_c}\]</div>
+      <p class="prose">Matrix-Game-3.0 receives W with duty cycle \(\min(v/10\,\mathrm{m/s},1)\) and camera yaw \(\Delta\psi_c/15^\circ\) per frame; sub-deadzone yaw (|·| &lt; 0.02) is accumulated. Lane changes are steering doublets, so the vehicle's heading changes and is never translated sideways. The ego vehicle is drawn from 17 renders (−24° to +24°, pivot at the rear axle) at the relative yaw \(\psi-\psi_c\).</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Wheelbase \(L\)</td><td class="num">2.7 m</td></tr>
+          <tr><td>Max steering \(\delta_{\max}\), \(v_{\mathrm{ref}}\)</td><td class="num">32°, 6 m/s</td></tr>
+          <tr><td>Acceleration \(a^{+}\) / braking \(a^{-}\)</td><td class="num">3 / 7 m/s²</td></tr>
+          <tr><td>Drag \(c\), top speed</td><td class="num">0.12 s⁻¹, 25 m/s</td></tr>
+          <tr><td>Camera lag \(\tau_c\)</td><td class="num">0.35 s</td></tr>
+          <tr><td>Lane change</td><td class="num">s = ±0.7, 2 × 0.5 s</td></tr>
+          <tr><td>Controller rate</td><td class="num">34 Hz (2 × 17 fps)</td></tr>
+          <tr><td>Sampling</td><td class="num">3 steps, 20 chunks × 40 frames</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div></section>
 
-<h2>Backend comparison</h2>
-<p class="note">Same initial observation and the same input sequence. Left: Matrix-Game-2.0 GTA-drive (third-person, vehicle generated by the model). Right: Matrix-Game-3.0, conditioned on the vehicle-free frame, with the vehicle drawn from the controller state.</p>
-{{COMPARISON}}
+<section id="results"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">Results</div>
+    <h2>Rollouts</h2>
+    <p class="prose">Matrix-Game-3.0, 704×1280, 3 sampling steps, 20 autoregressive chunks (817 generated frames, ≈48 s). Every second frame is shown, which corresponds to 2× real time. Select a clip to open it in the explorer.</p>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="gallery" id="gallery"></div>
+</div></section>
 
-<h2>Method</h2>
-<h3>Initial observation</h3>
-{{PIPELINE}}
-<ul>
-  <li><b>Retrieval.</b> The single-image search endpoint that <code>streetlevel.streetview.find_panorama</code> relies on has been decommissioned. We query Street View coverage tiles instead; they list only panoramas captured by Google's own vehicles. We fetch metadata by panorama id, prefer panoramas on the named road (e.g. FDR Drive over its service road), and download at zoom 4, falling back to zoom 3 when tiles are missing.</li>
-  <li><b>View.</b> Equirectangular-to-perspective remap, yaw = capture heading (or a user-specified heading), pitch −3°, horizontal FOV 90°, output 1280×704.</li>
-  <li><b>Near-field vehicle removal.</b> Mask2Former (Swin-L, Cityscapes) semantic classes {car, truck, bus, train, motorcycle, bicycle}. A connected component is removed if it is in the ego lane ahead, touches the bottom of the frame, is large or tall, or overlaps the footprint of the inserted vehicle. Parked vehicles at the image sides are kept. Masks are dilated by 18 px and extended downward to cover shadows; holes are filled with LaMa (big-lama). Black no-data regions of the panorama are added to the mask.</li>
-  <li><b>Vehicle insertion.</b> CC-BY vehicle meshes from MeshFleet are rendered with pyrender (EGL) from about two car lengths behind and above the car, and composited at 31% of the image width with a two-layer blurred contact shadow and a global gain/tint match to the scene. For Matrix-Game-3.0 we additionally render 17 yaw angles (−24° to +24° in 3° steps) about the rear axle.</li>
-</ul>
+<section id="analysis"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">Analysis</div>
+    <h2>Observations</h2>
+  </div>
+  <h3>The ego vehicle must not be in the conditioning frame</h3>
+  <p class="prose">Matrix-Game-3.0 has no ego-vehicle prior. A vehicle composited into the conditioning frame is treated as static scene content: the camera drives into it and it smears across the lower image within about a second. Conditioning on the inpainted frame and compositing the vehicle afterwards removes the artifact.</p>
+  <figure>
+    <div class="strip">{{STRIP}}</div>
+    <figcaption><b>Figure 2.</b> Same scene, actions and seed. Top: the conditioning frame contains the vehicle (no overlay). Bottom: vehicle-free conditioning frame, vehicle composited from the render bank. Times are displayed time at 2× playback.</figcaption>
+  </figure>
 
-<h3>Vehicle model and action mapping</h3>
-<p>Inputs are throttle/brake \(u_t\in[-1,1]\) and steering \(s_t\in[-1,1]\) at the backend frame rate. The steering input is low-pass filtered (\(\tau=0.15\) s) and integrated with a kinematic bicycle model and a first-order chase camera:</p>
-\[
-\dot v = a^{+}\max(u,0) + a^{-}\min(u,0) - c\,v,\qquad
-\delta = \frac{s\,\delta_{\max}}{1 + v/v_{\mathrm{ref}}},\qquad
-\dot\psi = \frac{v}{L}\tan\delta,\qquad
-\dot\psi_{c} = \frac{\psi-\psi_{c}}{\tau_c},
-\]
-<p>with \(L=2.7\) m, \(\delta_{\max}=32^\circ\), \(v_{\mathrm{ref}}=6\) m/s, \(a^{+}=3\) m/s², \(a^{-}=7\) m/s², \(c=0.12\) s⁻¹, \(v\le 25\) m/s, \(\tau_c=0.35\) s. Lane changes are steering doublets (\(s=\pm0.7\) for 0.5 s each). Neither model has an analog throttle, so continuous commands are mapped to binary keys by pulse-width modulation.</p>
-<div class="tablewrap"><table>
-  <thead><tr><th></th><th>Matrix-Game-2.0 GTA-drive</th><th>Matrix-Game-3.0</th></tr></thead>
-  <tbody>
-    <tr><td>Viewpoint</td><td>third-person chase camera</td><td>first-person</td></tr>
-    <tr><td>Keyboard</td><td>[W, S] = PWM(\(u^{+}\)), PWM(\(u^{-}\)), 1 s period</td><td>W = PWM(\(\min(v/10\,\mathrm{m/s},\,1)\)), 0.5 s period; A/D unused</td></tr>
-    <tr><td>Mouse yaw</td><td>\(0.1\,s\) (the training data uses ±0.1 for A/D)</td><td>\(\Delta\psi_c/15^\circ\) per frame; values below the 0.02 deadzone are accumulated</td></tr>
-    <tr><td>Ego vehicle</td><td>generated by the model</td><td>render at relative yaw \(\psi-\psi_c\)</td></tr>
-    <tr><td>Conditioning frame</td><td>with inserted vehicle</td><td>vehicle-free (inpainted)</td></tr>
-    <tr><td>Resolution, rate</td><td>352×640, 12 fps</td><td>704×1280, 17 fps</td></tr>
-    <tr><td>Sampling</td><td>3 steps, causal blocks of 3 latent frames, KV cache</td><td>3 steps, 56-frame windows advancing 40 frames, camera-aware memory</td></tr>
-    <tr><td>Text prompt</td><td>none (image + actions)</td><td>per-scene prompt</td></tr>
-  </tbody>
-</table></div>
-<p class="note">The GTA-drive checkpoint (<code>gta_distilled_model/gta_keyboard2dim.safetensors</code>) was published in <code>Skywork/Matrix-Game-2.0</code> and later removed from the main branch. We load it from revision <code>f1729d9</code> and use the matching inference code from commit <code>756776d^</code> of <code>SkyworkAI/Matrix-Game</code>.</p>
+  <h3>Forward speed is fixed by the model</h3>
+  <div class="two">
+    <p class="prose">Matrix-Game-3.0 advances a roughly constant distance per frame while W is held. The action interface can slow it down (W duty cycle) but not speed it up: scaling the camera translation used for its Plücker-ray conditioning left the output essentially unchanged. We therefore set apparent speed through temporal subsampling: the controller runs at 34 Hz and every second generated frame is displayed.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Setting (FDR Drive, highway)</th><th>Mean flow, px/frame</th></tr></thead>
+      <tbody>
+        <tr><td>W duty 12% (first 2 s)</td><td class="num">0.04</td></tr>
+        <tr><td>W held, translation × 1</td><td class="num">0.66</td></tr>
+        <tr><td>W held, translation × 3</td><td class="num">0.65</td></tr>
+        <tr><td>W held, frame stride 2 (shown)</td><td class="num">{{FLOW_STRIDE}}</td></tr>
+      </tbody>
+    </table><p class="note" style="margin-top:8px">Farnebäck optical flow on a mid-image band, frames resized to 320 px width.</p></div>
+  </div>
 
-<h2>Limitations</h2>
-<ul>
-  <li>Only the first frame is observed. Building layout, signage and traffic beyond it are sampled from the model's prior and do not correspond to the real street network.</li>
-  <li>GTA-drive outputs converge to GTA V appearance (geometry simplification, sky and water shading, vehicle identity) on the timescale of the clip. Shorter rollouts or periodic re-anchoring to Street View would be needed for geographic fidelity.</li>
-  <li>The Matrix-Game-3.0 ego vehicle is a 2D layer driven by the controller. It is not occluded by, does not cast shadows onto, and does not interact with generated content.</li>
-  <li>Large heading changes mid-block (e.g. 90° turns away from intersections) steer the camera into building facades and the rollout degrades. Turns are only meaningful when the initial frame is at an intersection.</li>
-  <li>Matrix-Game-3.0 moves a fixed distance per frame while W is held, so its maximum speed is set by the model, not the controller. Scaling the camera translation used for its Plücker-ray conditioning by 3× left the output essentially unchanged (mean Farnebäck flow 0.65 vs 0.66 px/frame at 320 px width). A lower W duty cycle does reduce speed (0.04 px/frame at 12% duty). The Matrix-Game-3.0 overlay therefore shows no speed readout.</li>
-</ul>
+  <h3>Limitations</h3>
+  <div class="lim">
+    <div><b>Single observation</b>Only the first frame is observed. Content entering the view later is sampled from the model's prior and does not match the real street.</div>
+    <div><b>Long-horizon degradation</b>Quality is highest in roughly the first 15 s of generated time. Afterwards facades simplify into flat geometry, road texture streaks, and color shifts. Forward driving rarely revisits earlier viewpoints, so camera-aware memory does not counteract this.</div>
+    <div><b>2D ego vehicle</b>The composited vehicle is not occluded by, does not shadow, and does not interact with generated content.</div>
+    <div><b>Turns</b>Large heading changes away from intersections steer the camera into facades. Turn routes are only meaningful when the first frame is at an intersection.</div>
+  </div>
+</div></section>
 
-<h2>Reproduction</h2>
-<pre><code>python -m nycdrive.prepare_inputs                                # curated scenes
-python -m nycdrive.prepare_inputs --random --seed 7              # random location
-python -m nycdrive.prepare_inputs --lat 40.7497 --lon -73.9877 --name herald_square
-
-python -m nycdrive.drive_gta --scene data/inputs/fdr_drive --route highway   # Matrix-Game-2.0 GTA-drive
-python -m nycdrive.drive     --scene data/inputs/fdr_drive --route highway   # Matrix-Game-3.0
-python -m nycdrive.drive     --scene data/inputs/fdr_drive --interactive     # step-wise keyboard control</code></pre>
-<p class="note">Route presets (<code>cruise</code>, <code>highway</code>, <code>downtown</code>, <code>slalom</code>, <code>turn_left</code>, <code>turn_right</code>) are defined in <code>nycdrive/vehicle.py</code>; custom routes are JSON lists of <code>[seconds, throttle, steer]</code>.</p>
-
-<h2>References and assets</h2>
-<ol class="refs">
-  <li>Skywork AI. <a href="https://github.com/SkyworkAI/Matrix-Game">Matrix-Game 2.0</a>: an open-source, real-time, streaming interactive world model, 2025. Weights: <a href="https://huggingface.co/Skywork/Matrix-Game-2.0">Skywork/Matrix-Game-2.0</a>.</li>
-  <li>Skywork AI. <a href="https://huggingface.co/Skywork/Matrix-Game-3.0">Matrix-Game 3.0</a>: real-time and streaming interactive world model with long-horizon memory, 2026.</li>
-  <li>D. Boborzi et al. <a href="https://arxiv.org/abs/2503.14002">MeshFleet</a>: filtered and annotated 3D vehicle dataset for domain-specific generative modeling, 2025.</li>
-  <li>B. Cheng et al. Masked-attention mask transformer for universal image segmentation (Mask2Former). CVPR 2022.</li>
-  <li>R. Suvorov et al. Resolution-robust large mask inpainting with Fourier convolutions (LaMa). WACV 2022.</li>
-  <li>sk-zk. <a href="https://github.com/sk-zk/streetlevel">streetlevel</a>. Street View imagery © Google.</li>
-  <li>Vehicle meshes (CC-BY, via MeshFleet / Sketchfab): "Subaru WRX STI" by Skyborg; "SuzukiVitara3DModel" by TuMankito77; "Dodge-charger-pov" by lukas.ohmer; a Ford Mustang GT and a Ferrari 488 whose Sketchfab pages are no longer online (see the repository README).</li>
-</ol>
-
+<section id="citation"><div class="wrap">
+  <div class="sec-head"><div class="eyebrow">Citation</div><h2>BibTeX</h2></div>
+<pre class="bib" id="bib"><span id="bibtext">@misc{turkcan2026matrixnewyork,
+  title        = {Matrix New York: Street View Initial Observations and Vehicle Control
+                  for Interactive Video World Models},
+  author       = {Turkcan, Mehmet Kerem},
+  year         = {2026},
+  howpublished = {\url{https://github.com/mkturkcan/matrix-new-york}}
+}</span><button class="copy" id="copy" type="button">Copy</button></pre>
+</div></section>
 </main>
+
+<footer><div class="wrap cols">
+  <div>
+    <div class="eyebrow" style="margin-bottom:12px">References</div>
+    <ol>
+      <li>Skywork AI. <a href="https://huggingface.co/Skywork/Matrix-Game-3.0">Matrix-Game 3.0</a>: real-time and streaming interactive world model with long-horizon memory, 2026.</li>
+      <li>D. Boborzi et al. <a href="https://arxiv.org/abs/2503.14002">MeshFleet</a>: filtered and annotated 3D vehicle dataset for domain-specific generative modeling, 2025.</li>
+      <li>B. Cheng et al. Masked-attention mask transformer for universal image segmentation. CVPR 2022.</li>
+      <li>R. Suvorov et al. Resolution-robust large mask inpainting with Fourier convolutions. WACV 2022.</li>
+      <li>sk-zk. <a href="https://github.com/sk-zk/streetlevel">streetlevel</a>.</li>
+    </ol>
+  </div>
+  <div>
+    <div class="eyebrow" style="margin-bottom:12px">Assets</div>
+    <p>Street View imagery © Google. Map tiles © Esri, HERE, Garmin, © OpenStreetMap contributors. Vehicle meshes via MeshFleet (CC-BY): "Subaru WRX STI" by Skyborg, "SuzukiVitara3DModel" by TuMankito77, "Dodge-charger-pov" by lukas.ohmer, and two models whose Sketchfab pages are no longer online (see the <a href="https://github.com/mkturkcan/matrix-new-york#references-and-licenses">README</a>).</p>
+    <p>Code released under Apache-2.0.</p>
+  </div>
+</div></footer>
+
+<script>
+const SITE = /*DATA*/{}/*END*/;
+const $ = s => document.querySelector(s);
+addEventListener('scroll', () => $('#nav').classList.toggle('scrolled', scrollY > 40), {passive: true});
+
+// ---- explorer
+const clips = SITE.clips || [];
+const pv = $('#pv');
+let cur = -1, markers = [];
+const locs = [];
+clips.forEach(c => { let l = locs.find(x => x.scene === c.scene); if (!l) { l = {scene: c.scene, lat: c.lat, lon: c.lon, clips: []}; locs.push(l); } l.clips.push(clips.indexOf(c)); c.loc = locs.indexOf(l); });
+
+function listScenes() {
+  const box = $('#scenes'); box.innerHTML = '';
+  clips.forEach((c, i) => {
+    const b = document.createElement('button'); b.className = 'scene'; b.type = 'button';
+    b.innerHTML = `<span class="n">${String(c.loc + 1).padStart(2, '0')}</span><span class="t">${c.title}</span><span class="r">${c.route}</span>`;
+    b.onclick = () => select(i, true); box.appendChild(b);
+  });
+}
+function tracePath(c) {
+  const n = c.steer.length, w = 400;
+  return c.steer.map((s, k) => `${k ? 'L' : 'M'}${(k / (n - 1) * w).toFixed(1)} ${(22 - s * 20).toFixed(1)}`).join('');
+}
+function setMarkers() { markers.forEach((m, k) => { const el = m.getElement(); if (el) el.firstChild.classList.toggle('on', cur >= 0 && k === clips[cur].loc); }); }
+function select(i, play) {
+  if (i === cur) { if (play) pv.play().catch(() => {}); return; }
+  cur = i; const c = clips[i];
+  pv.src = c.src; pv.poster = c.poster;
+  if (play) pv.play().catch(() => {});
+  document.querySelectorAll('.scene').forEach((b, k) => b.classList.toggle('on', k === i));
+  setMarkers();
+  $('#trpath').setAttribute('d', tracePath(c));
+  $('#meta').innerHTML = `<span><b>${c.title}</b></span><span>route ${c.route}</span><span>${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}</span><span>panorama ${c.date}</span><span>${c.frames} frames · 2× playback</span>`;
+}
+function tick() {
+  const c = clips[cur];
+  if (c && c.steer.length) {
+    const k = Math.min(c.steer.length - 1, Math.floor(pv.currentTime * c.fps));
+    const s = c.steer[k], u = c.thr[k], x = k / (c.steer.length - 1) * 400;
+    $('#wheel').style.transform = `rotate(${(s * 120).toFixed(1)}deg)`;
+    $('#thr').style.height = `${Math.max(0, u) * 100}%`;
+    $('#brk').style.height = `${Math.max(0, -u) * 100}%`;
+    $('#playhead').setAttribute('x1', x); $('#playhead').setAttribute('x2', x);
+    $('#tlabel').textContent = `t ${pv.currentTime.toFixed(1)} s · steer ${s >= 0 ? '+' : '−'}${Math.abs(s).toFixed(2)} · throttle ${u.toFixed(2)}`;
+  }
+  requestAnimationFrame(tick);
+}
+function initMap() {
+  if (!window.L || !locs.length) return;
+  const map = L.map('map', {zoomControl: false, scrollWheelZoom: false, attributionControl: true});
+  const esri = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+  L.tileLayer(esri + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {maxZoom: 16,
+    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'}).addTo(map);
+  L.tileLayer(esri + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {maxZoom: 16, opacity: .8}).addTo(map);
+  markers = locs.map((l, k) => L.marker([l.lat, l.lon], {icon: L.divIcon({className: '', html: `<div class="pin">${k + 1}</div>`, iconSize: [26, 26], iconAnchor: [13, 13]})})
+    .on('click', () => select(l.clips[0], true)).addTo(map));
+  map.fitBounds(L.latLngBounds(locs.map(l => [l.lat, l.lon])), {padding: [28, 28]});
+  setMarkers();
+}
+listScenes(); if (clips.length) select(0, false); requestAnimationFrame(tick);
+addEventListener('load', initMap);
+
+// ---- gallery
+const groups = ['All', ...new Set(clips.map(c => c.group))];
+function gallery(g) {
+  const box = $('#gallery'); box.innerHTML = '';
+  clips.forEach((c, i) => {
+    if (g !== 'All' && c.group !== g) return;
+    const d = document.createElement('div'); d.className = 'card';
+    d.innerHTML = `<video src="${c.src}" poster="${c.poster}" muted loop playsinline preload="none"></video>
+      <div class="body"><div class="t">${c.title}</div><div class="s">${c.route} · ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)} · ${c.date}</div></div>`;
+    const v = d.querySelector('video');
+    d.onmouseenter = () => v.play().catch(() => {}); d.onmouseleave = () => v.pause();
+    d.onclick = () => { select(i, true); $('#explorer').scrollIntoView(); };
+    box.appendChild(d);
+  });
+}
+groups.forEach((g, k) => { const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.textContent = g;
+  b.setAttribute('aria-pressed', k === 0); b.onclick = () => { document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x === b)); gallery(g); };
+  $('#chips').appendChild(b); });
+gallery('All');
+
+// ---- compare slider
+const cmp = $('#cmp');
+if (cmp) cmp.querySelector('input').addEventListener('input', e => {
+  const v = e.target.value; cmp.querySelector('.top').style.clipPath = `inset(0 0 0 ${v}%)`; cmp.querySelector('.bar').style.left = `${v}%`; });
+
+// ---- citation
+$('#copy').onclick = () => navigator.clipboard.writeText($('#bibtext').textContent).then(() => {
+  $('#copy').textContent = 'Copied'; setTimeout(() => $('#copy').textContent = 'Copy', 1500); });
+
+// ---- math
+addEventListener('load', () => window.renderMathInElement && renderMathInElement(document.body, {delimiters: [{left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}]}));
+</script>
 </body>
 </html>

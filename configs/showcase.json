@@ -1,0 +1,216 @@
+[
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/fdr_drive",
+  "route": "highway",
+  "group": "Highway",
+  "title": "FDR Drive",
+  "label": "FDR DRIVE",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/times_square",
+  "route": "downtown",
+  "group": "Urban",
+  "title": "7th Avenue, Times Square",
+  "label": "7TH AVENUE, TIMES SQUARE",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/gowanus_expressway",
+  "route": "highway",
+  "group": "Highway",
+  "title": "Gowanus Expressway",
+  "label": "GOWANUS EXPRESSWAY",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/park_avenue",
+  "route": "downtown",
+  "group": "Urban",
+  "title": "Park Avenue",
+  "label": "PARK AVENUE",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/henry_hudson_pkwy",
+  "route": "highway",
+  "group": "Highway",
+  "title": "Henry Hudson Parkway",
+  "label": "HENRY HUDSON PARKWAY",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/fifth_avenue",
+  "route": "downtown",
+  "group": "Urban",
+  "title": "Fifth Avenue",
+  "label": "FIFTH AVENUE",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/herald_square",
+  "route": "downtown",
+  "group": "Random / user-specified",
+  "title": "Herald Square (--lat/--lon)",
+  "label": "HERALD SQUARE",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/random_40.67570_-73.92808",
+  "route": "cruise",
+  "group": "Random / user-specified",
+  "title": "Crown Heights (--random)",
+  "label": "CROWN HEIGHTS",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/canal_street",
+  "route": "turn_right",
+  "group": "Urban",
+  "title": "Canal Street",
+  "label": "CANAL STREET",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/soho_broadway",
+  "route": "downtown",
+  "group": "Urban",
+  "title": "Broadway, SoHo",
+  "label": "BROADWAY, SOHO",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/fdr_drive",
+  "route": "slalom",
+  "group": "Highway",
+  "title": "FDR Drive",
+  "label": "FDR DRIVE",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/dumbo",
+  "route": "cruise",
+  "group": "Urban",
+  "title": "DUMBO",
+  "label": "DUMBO",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/times_square",
+  "route": "turn_right",
+  "group": "Urban",
+  "title": "7th Avenue, Times Square",
+  "label": "7TH AVENUE, TIMES SQUARE",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/park_avenue",
+  "route": "slalom",
+  "group": "Urban",
+  "title": "Park Avenue",
+  "label": "PARK AVENUE",
+  "num_iterations": 20,
+  "seed": 42,
+  "extra_args": [
+   "--frame_stride",
+   "2"
+  ]
+ },
+ {
+  "backend": "mg3",
+  "scene": "data/inputs/times_square",
+  "route": "downtown",
+  "group": "ablation",
+  "title": "Vehicle in conditioning frame",
+  "label": "ABLATION",
+  "num_iterations": 6,
+  "seed": 42,
+  "save_name": "ablation_vehicle_in_frame",
+  "extra_args": [
+   "--frame_stride",
+   "2",
+   "--condition",
+   "image.png",
+   "--no_player"
+  ]
+ }
+]
