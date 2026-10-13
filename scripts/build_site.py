@@ -183,21 +183,41 @@ def main():
     flow = vids / "fdr_drive_highway_world.mp4"
     flow_txt = f"{mean_flow(flow):.2f}" if flow.exists() else "n/a"
 
-    # hero: first 12 s of the hero rollout, stated in the caption
-    hm = next(m for m in models if m["id"] == hero["model"])
+    # hero: crossfaded montage of rollout openings (raw world-model output), or the first 12 s of one rollout
     hero_src = DOCS / "videos" / "hero.mp4"
-    subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-i", str(ROOT / hm["videos_dir"] / f"{hero['id'].split('/')[1]}_clean.mp4"),
-                    "-t", "12", "-c:v", "libx264", "-preset", "slow", "-crf", "24", "-pix_fmt", "yuv420p",
-                    "-movflags", "+faststart", "-an", str(hero_src)], check=True)
-    hero_cap = (f"{hm['name']} rollout from a single Street View frame ({hero['title']}). "
-                f"First 12 s of {hero['frames'] / hero['fps']:.0f} s, {hero['playback']}.")
+    vdirs = {m["id"]: ROOT / m["videos_dir"] for m in models}
+    segs = [s for s in page.get("hero_montage", []) if (vdirs.get(s[0], ROOT) / f"{s[1]}_world.mp4").exists()]
+    if segs:
+        xf, cmd, chain = 0.6, [FFMPEG, "-y", "-loglevel", "error"], ""
+        for mid, n, start, dur in segs:
+            cmd += ["-ss", str(start), "-t", str(dur), "-i", str(vdirs[mid] / f"{n}_world.mp4")]
+        prev, offset = "[0:v]", 0.0
+        for k in range(1, len(segs)):
+            offset += segs[k - 1][3] - xf
+            chain += f"{prev}[{k}:v]xfade=transition=fade:duration={xf}:offset={offset:.2f}[x{k}];"
+            prev = f"[x{k}]"
+        total = sum(sg[3] for sg in segs) - xf * (len(segs) - 1)
+        chain += f"{prev}fade=t=in:st=0:d=0.4,fade=t=out:st={total - 0.4:.2f}:d=0.4,format=yuv420p[v]"
+        subprocess.run(cmd + ["-filter_complex", chain, "-map", "[v]", "-c:v", "libx264", "-preset", "slow", "-crf", "24",
+                              "-movflags", "+faststart", "-an", str(hero_src)], check=True)
+        subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-ss", "1.0", "-i", str(hero_src), "-frames:v", "1", "-q:v", "3",
+                        str(DOCS / "videos" / "hero.jpg")], check=True)
+        hero_poster, hero_cap = "videos/hero.jpg", page["hero_caption"]
+    else:
+        hm = next(m for m in models if m["id"] == hero["model"])
+        subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-i", str(vdirs[hm["id"]] / f"{hero['id'].split('/')[1]}_clean.mp4"),
+                        "-t", "12", "-c:v", "libx264", "-preset", "slow", "-crf", "24", "-pix_fmt", "yuv420p",
+                        "-movflags", "+faststart", "-an", str(hero_src)], check=True)
+        hero_poster = hero["poster"]
+        hero_cap = (f"{hm['name']} rollout from a single Street View frame ({hero['title']}). "
+                    f"First 12 s of {hero['frames'] / hero['fps']:.0f} s, {hero['playback']}.")
 
     lims = "".join(f"<li>{t}</li>" for t in page["limitations"])
     mapping = ("<thead><tr><th></th>" + "".join(f'<th>{m["name"]}</th>' for m in models) + "</tr></thead><tbody>"
                + "".join("<tr><td>" + row[0] + "</td>" + "".join(f"<td>{row[1].get(m['id'], '—')}</td>" for m in models) + "</tr>"
                          for row in page["mapping"]) + "</tbody>")
-    subs = {"{{HERO_SRC}}": "videos/hero.mp4", "{{HERO_POSTER}}": hero["poster"], "{{HERO_CAPTION}}": html.escape(hero_cap),
-            "{{OG_IMAGE}}": f"{SITE_URL}/{hero['poster']}", "{{STEPS}}": step_html, "{{CMP_A}}": "assets/step_raw.jpg",
+    subs = {"{{HERO_SRC}}": "videos/hero.mp4", "{{HERO_POSTER}}": hero_poster, "{{HERO_CAPTION}}": html.escape(hero_cap),
+            "{{OG_IMAGE}}": f"{SITE_URL}/{hero_poster}", "{{STEPS}}": step_html, "{{CMP_A}}": "assets/step_raw.jpg",
             "{{CMP_B}}": "assets/step_image.jpg", "{{CMP_CAPTION}}": cmp_caption, "{{STRIP}}": strip, "{{FLOW_STRIDE}}": flow_txt,
             "{{ABSTRACT}}": page["abstract"], "{{MODELS_LEDE}}": page["models_lede"],
             "{{PANO_LEDE}}": page["pano_lede"], "{{MAPPING_TABLE}}": mapping, "{{RESULTS_LEDE}}": page["results_lede"],

@@ -42,5 +42,38 @@
   "The composited ego vehicle is a 2D layer. It is not occluded by, does not shadow, and does not interact with generated content.",
   "Large heading changes away from intersections steer the camera into facades. Turn routes are only meaningful when the first frame is at an intersection."
  ],
- "refs_extra": ""
+ "refs_extra": "",
+ "hero_montage": [
+  [
+   "mg3",
+   "times_square_downtown",
+   0.3,
+   3.2
+  ],
+  [
+   "mg3",
+   "gowanus_expressway_highway",
+   0.5,
+   3.6
+  ],
+  [
+   "mg3",
+   "herald_square_downtown",
+   0.5,
+   3.6
+  ],
+  [
+   "mg3",
+   "henry_hudson_pkwy_highway",
+   0.5,
+   3.8
+  ],
+  [
+   "mg3",
+   "dumbo_cruise",
+   0.5,
+   3.6
+  ]
+ ],
+ "hero_caption": "Matrix-Game-3.0 output with the ego-vehicle layer omitted. Opening seconds of five rollouts at 2× playback."
 }
