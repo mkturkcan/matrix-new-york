@@ -126,7 +126,7 @@ def main():
                           "group": j["group"], "route": j["route"], "lat": meta["lat"], "lon": meta["lon"],
                           "date": meta.get("date", ""), "src": f"videos/{m['id']}/{n}.mp4", "poster": f"videos/{m['id']}/{n}.jpg",
                           "frames": nframes, "fps": round(fps, 3),
-                          "playback": f"{stride}× playback" if stride > 1 else "real time",
+                          "playback": f"frame stride {stride}" if stride > 1 else "every frame",
                           "steer": [round(float(x), 2) for x in ctrl[:, 1]], "thr": [round(float(x), 2) for x in ctrl[:, 0]]})
             pano = vdir / f"{n}_pano.mp4"
             if pano.exists():
@@ -191,10 +191,12 @@ def main():
         xf, cmd, chain = 0.6, [FFMPEG, "-y", "-loglevel", "error"], ""
         for mid, n, start, dur in segs:
             cmd += ["-ss", str(start), "-t", str(dur), "-i", str(vdirs[mid] / f"{n}_world.mp4")]
-        prev, offset = "[0:v]", 0.0
+        # backends differ in frame rate; xfade needs identical rate, size and timebase
+        chain = "".join(f"[{k}:v]fps=17,scale=1280:704,setsar=1,settb=AVTB[n{k}];" for k in range(len(segs)))
+        prev, offset = "[n0]", 0.0
         for k in range(1, len(segs)):
             offset += segs[k - 1][3] - xf
-            chain += f"{prev}[{k}:v]xfade=transition=fade:duration={xf}:offset={offset:.2f}[x{k}];"
+            chain += f"{prev}[n{k}]xfade=transition=fade:duration={xf}:offset={offset:.2f}[x{k}];"
             prev = f"[x{k}]"
         total = sum(sg[3] for sg in segs) - xf * (len(segs) - 1)
         chain += f"{prev}fade=t=in:st=0:d=0.4,fade=t=out:st={total - 0.4:.2f}:d=0.4,format=yuv420p[v]"

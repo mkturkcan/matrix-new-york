@@ -1,0 +1,38 @@
+[
+ {
+  "scene": "data/inputs/fdr_drive",
+  "route": "highway",
+  "title": "FDR Drive",
+  "group": "Highway"
+ },
+ {
+  "scene": "data/inputs/times_square",
+  "route": "downtown",
+  "title": "7th Avenue, Times Square",
+  "group": "Urban"
+ },
+ {
+  "scene": "data/inputs/gowanus_expressway",
+  "route": "highway",
+  "title": "Gowanus Expressway",
+  "group": "Highway"
+ },
+ {
+  "scene": "data/inputs/park_avenue",
+  "route": "downtown",
+  "title": "Park Avenue",
+  "group": "Urban"
+ },
+ {
+  "scene": "data/inputs/fifth_avenue",
+  "route": "downtown",
+  "title": "Fifth Avenue",
+  "group": "Urban"
+ },
+ {
+  "scene": "data/inputs/herald_square",
+  "route": "downtown",
+  "title": "Herald Square (--lat/--lon)",
+  "group": "Random / user-specified"
+ }
+]

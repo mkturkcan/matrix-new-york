@@ -1,66 +1,91 @@
 {
- "abstract": "We drive pretrained action-conditioned video world models through New York City starting from street-level imagery. For a query location we retrieve the nearest Google Street View panorama, reproject it along the capture heading, remove near-field vehicles, and insert a 3D vehicle rendered under a chase camera. A kinematic bicycle model converts throttle and steering into each model's action space. First-person models are conditioned on the vehicle-free frame, and the ego vehicle is composited from renders indexed by the controller's yaw relative to the camera. No model is fine-tuned, and each rollout runs on a single GPU.",
- "models_lede": "All models receive the same initial observation and the same controller trajectory; only the action adapter differs.",
- "pano_lede": "",
- "results_lede": "All rollouts start from a single Street View frame. Select a clip to open it in the viewer above.",
+ "abstract": "We drive pretrained interactive video world models through New York City starting from street-level imagery. For a query location we retrieve the nearest Google Street View panorama, remove near-field vehicles, and insert a 3D vehicle rendered under a chase camera. A kinematic bicycle model converts throttle and steering into the action space of each model: keyboard and camera-yaw actions for Matrix-Game-3.0, a camera-to-world trajectory for Matrix-Game-3.5, and a translation trajectory over the full 360° panorama for PanoWorld. The ego vehicle is composited from renders indexed by the controller's yaw relative to the camera. No model is fine-tuned, and each rollout runs on a single GPU.",
+ "models_lede": "The three models differ in what they condition on and how they are controlled. Each receives the same Street View observation and the same controller trajectory; only the action adapter differs.",
+ "pano_lede": "PanoWorld conditions on the full Street View panorama and generates the whole sphere. The perspective views elsewhere on this page are crops of this output along the chase-camera heading. The last two clips restart every 81 frames from the real panorama nearest the vehicle's position.",
+ "results_lede": "All rollouts start from a single Street View observation. Matrix-Game-3.0 clips show every second generated frame; Matrix-Game-3.5 and PanoWorld clips show every frame. Select a clip to open it in the viewer above.",
  "mapping": [
   [
    "Conditioning",
    {
-    "mg3": "vehicle-free perspective frame and text prompt"
+    "mg3": "vehicle-free perspective frame and text prompt",
+    "mg35": "vehicle-free perspective frame and text prompt",
+    "panoworld": "360° panorama with nearby vehicles inpainted, and text prompt"
    }
   ],
   [
    "Forward motion",
    {
-    "mg3": "W, duty min(v / 10 m/s, 1)"
+    "mg3": "W with duty cycle min(v / 10 m/s, 1)",
+    "mg35": "camera translation along the Street View capture path",
+    "panoworld": "camera translation, 0.10 units per frame at top speed"
    }
   ],
   [
    "Steering",
    {
-    "mg3": "camera yaw Δψ<sub>c</sub> / 15° per frame"
+    "mg3": "camera yaw Δψ<sub>c</sub> / 15° per frame",
+    "mg35": "camera yaw ψ<sub>c</sub> in the trajectory",
+    "panoworld": "yaw of the perspective crop; generated orientation is fixed"
    }
   ],
   [
    "Ego vehicle",
    {
-    "mg3": "composited at relative yaw ψ − ψ<sub>c</sub>"
+    "mg3": "composited at relative yaw ψ − ψ<sub>c</sub>",
+    "mg35": "composited at relative yaw ψ − ψ<sub>c</sub>",
+    "panoworld": "composited at relative yaw ψ − ψ<sub>c</sub>"
    }
   ],
   [
-   "Playback",
+   "Frames shown",
    {
-    "mg3": "frame stride 2 (controller at 34 Hz)"
+    "mg3": "every second (controller at 34 Hz)",
+    "mg35": "every frame (16 fps)",
+    "panoworld": "every frame (16 fps)"
+   }
+  ],
+  [
+   "Generation time per clip",
+   {
+    "mg3": "4.8 min for 817 frames",
+    "mg35": "8 min for 337 frames",
+    "panoworld": "2 min for 321 frames"
    }
   ]
  ],
- "analysis_extra": "",
+ "analysis_extra": "<h3>Road following</h3><p class=\"prose\">Matrix-Game-3.5 reproduces the commanded camera path closely but has no notion of the road, so an open-loop trajectory leaves the roadway wherever the real road bends or the initial heading is slightly off the road axis. Driving the route relative to the Street View capture path, obtained by chaining panorama links ahead of the start, and removing small corrective steering inputs reduced the drift but did not remove it. In all six scenes the camera reaches the sidewalk, a barrier or the river after 6 to 15 s, with a consistent bias to the right. Without Patch Memory a straight path reached the barrier within 5 s. Matrix-Game-3.0, which is driven by keyboard and yaw actions rather than poses, stays on the roadway on the straight and lane-change routes. For its first 5 to 10 s Matrix-Game-3.5 is the sharpest of the three models, with no streaking and plausible pedestrians and traffic.</p><h3>Panoramic conditioning</h3><p class=\"prose\">PanoWorld conditions on the full 360° capture and keeps the scene layout recognisable for the whole 20 s clip, for example the crane and river on FDR Drive and the billboards in Times Square. With the released 480p model a 90° perspective crop covers about 240 of the 960 panorama columns and is upsampled about 5×, so the driving view is soft. Apparent forward speed saturates at a slow roll: steps above roughly 0.2 units per frame streak, and above 0.4 the scene dissolves within 2 s. Orientation is fixed during generation, so steering rotates the crop but the generated road does not bend with the trajectory.</p><h3>Re-anchoring to real panoramas</h3><p class=\"prose\">Street View captures are spaced roughly 10 m apart along a street. Restarting each 81-frame PanoWorld segment from the real panorama nearest the vehicle's position keeps the rollout tied to real imagery, at the cost of cuts at segment boundaries where traffic and, if capture dates differ, lighting change. Neither Matrix-Game model accepts additional observations: the Matrix-Game-3.5 memory is indexed by rollout frame and cannot be seeded with external views without changes to its rollout code.</p>",
  "limitations": [
-  "Only the first frame is observed. Content entering the view later is sampled from the model's prior and does not match the real street.",
-  "Quality is highest in roughly the first 15 s of generated time. Afterwards facades simplify into flat geometry, road texture streaks, and color shifts. Forward driving rarely revisits earlier viewpoints, so camera-aware memory does not counteract this.",
+  "Only the first frame or panorama is observed, except in the re-anchored PanoWorld clips. Content entering the view later is sampled from the model's prior and does not match the real street.",
+  "Matrix-Game-3.0 quality is highest in roughly the first 15 s of generated time; afterwards facades simplify, road texture streaks, and color shifts. Matrix-Game-3.5 leaves the roadway after 6 to 15 s, and the Fifth Avenue clip washes out toward white. PanoWorld stays recognisable but is soft and slow.",
   "The composited ego vehicle is a 2D layer. It is not occluded by, does not shadow, and does not interact with generated content.",
-  "Large heading changes away from intersections steer the camera into facades. Turn routes are only meaningful when the first frame is at an intersection."
+  "Large heading changes away from intersections steer the camera into facades. Turn routes are only meaningful when the first frame is at an intersection.",
+  "The Matrix-Game-3.5 memory depends on Depth Anything 3 weights released under CC-BY-NC-4.0. The PanoWorld weights on Hugging Face carry no license tag; its code is Apache-2.0."
  ],
- "refs_extra": "",
+ "refs_extra": "<li>R. Qian et al. <a href=\"https://arxiv.org/abs/2608.29910\">Matrix-Game 3.5</a>: enhancing real-time streaming interactive world models with patch memory, 2026.</li><li>H. Li et al. <a href=\"https://arxiv.org/abs/2607.09661\">PanoWorld</a>: real-world panoramic generation, 2026.</li><li>Depth Anything 3, <a href=\"https://huggingface.co/depth-anything/DA3NESTED-GIANT-LARGE-1.1\">DA3NESTED-GIANT-LARGE-1.1</a> weights.</li>",
  "hero_montage": [
   [
-   "mg3",
+   "mg35",
    "times_square_downtown",
    0.3,
-   3.2
+   4.0
   ],
   [
-   "mg3",
+   "mg35",
    "gowanus_expressway_highway",
-   0.5,
-   3.6
+   2.0,
+   4.2
   ],
   [
    "mg3",
    "herald_square_downtown",
    0.5,
    3.6
+  ],
+  [
+   "mg35",
+   "fdr_drive_highway",
+   0.5,
+   4.0
   ],
   [
    "mg3",
@@ -75,5 +100,5 @@
    3.6
   ]
  ],
- "hero_caption": "Matrix-Game-3.0 output with the ego-vehicle layer omitted. Opening seconds of five rollouts at 2× playback."
+ "hero_caption": "Opening seconds of Matrix-Game-3.5 and Matrix-Game-3.0 rollouts, ego-vehicle layer omitted."
 }

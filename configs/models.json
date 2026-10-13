@@ -34,7 +34,7 @@
    ]
   ],
   "summary": "First-person action-conditioned model. Conditioned on the vehicle-free frame; the ego vehicle is drawn from the render bank.",
-  "playback": "2× playback (frame stride 2)",
+  "playback": "frame stride 2",
   "pending": false
  },
  {
@@ -45,10 +45,35 @@
   "videos_dir": "outputs/videos_mg35",
   "config": "configs/showcase_mg35.json",
   "link": "https://huggingface.co/RiemannDynamics/Matrix-Game-3.5-Base",
-  "facts": [],
-  "summary": "",
+  "facts": [
+   [
+    "Input",
+    "perspective image and text prompt"
+   ],
+   [
+    "Control",
+    "camera-to-world trajectory (OpenCV convention, metric)"
+   ],
+   [
+    "Memory",
+    "Patch Memory over generated frames"
+   ],
+   [
+    "Output",
+    "704×1280 at 16 fps, 84-frame blocks"
+   ],
+   [
+    "Adapter",
+    "chase-camera pose along the Street View capture path; ego vehicle composited"
+   ],
+   [
+    "License",
+    "Apache-2.0; memory depth model CC-BY-NC-4.0"
+   ]
+  ],
+  "summary": "First-person model controlled by a camera trajectory, with Patch Memory: generated frames are lifted to 3D with Depth Anything 3 and retrieved by visibility. Conditioned on the vehicle-free frame; the ego vehicle is composited.",
   "playback": "",
-  "pending": true
+  "pending": false
  },
  {
   "id": "panoworld",
@@ -58,9 +83,34 @@
   "videos_dir": "outputs/videos_panoworld",
   "config": "configs/showcase_panoworld.json",
   "link": "https://huggingface.co/Insta360-Research/PanoWorld",
-  "facts": [],
-  "summary": "",
+  "facts": [
+   [
+    "Input",
+    "equirectangular panorama (960×480) and text prompt"
+   ],
+   [
+    "Control",
+    "camera translation trajectory, fixed orientation"
+   ],
+   [
+    "Memory",
+    "none released; segments can be re-anchored to real panoramas"
+   ],
+   [
+    "Output",
+    "960×480 equirectangular at 16 fps, 161-frame causal segments"
+   ],
+   [
+    "Adapter",
+    "vehicle path as translation; crop yaw follows the chase camera; ego vehicle composited"
+   ],
+   [
+    "License",
+    "Apache-2.0 (code)"
+   ]
+  ],
+  "summary": "Panorama-to-panoramic-video model. Takes the full 360° Street View capture; steering is applied by rotating the perspective crop inside the generated panorama.",
   "playback": "",
-  "pending": true
+  "pending": false
  }
 ]

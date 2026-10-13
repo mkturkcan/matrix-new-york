@@ -308,7 +308,7 @@ footer ol { margin: 0; padding-left: 18px; } footer li { margin-bottom: 6px; }
   <p class="prose">{{PANO_LEDE}}</p>
   <div class="choices" id="panochips"></div>
   <div class="pano" id="pano"><div class="hint">Drag to look around</div><div class="compass" id="compass"></div></div>
-  <div class="flat"><video id="panoflat" muted loop playsinline controls preload="none"></video></div>
+  <div class="flat"><video id="panoflat" muted loop playsinline controls preload="metadata"></video></div>
   <p class="note" style="margin-top:8px">The same output as an equirectangular video.</p>
 </div></section>
 
@@ -368,7 +368,7 @@ footer ol { margin: 0; padding-left: 18px; } footer li { margin-bottom: 6px; }
     <div>
       <p class="prose">Inputs are throttle and brake \(u\in[-1,1]\) and steering \(s\in[-1,1]\), low-pass filtered with \(\tau=0.15\) s. A kinematic bicycle model with speed-dependent steering authority and a first-order chase camera integrates them:</p>
       <div class="eq">\[\dot v = a^{+}u^{+} - a^{-}u^{-} - c\,v,\quad \delta=\frac{s\,\delta_{\max}}{1+v/v_{\mathrm{ref}}},\quad \dot\psi=\frac{v}{L}\tan\delta,\quad \dot\psi_c=\frac{\psi-\psi_c}{\tau_c}\]</div>
-      <p class="prose">Lane changes are steering doublets, so the vehicle's heading changes and it is never translated sideways. For first-person models the ego vehicle is drawn from 17 renders (−24° to +24°, pivot at the rear axle) at the relative yaw \(\psi-\psi_c\).</p>
+      <p class="prose">Lane changes are steering doublets, so the vehicle's heading changes and it is never translated sideways. In all three backends the ego vehicle is drawn from 17 renders (−24° to +24°, pivot at the rear axle) at the relative yaw \(\psi-\psi_c\).</p>
     </div>
     <div class="tablewrap">
       <table>
@@ -402,7 +402,7 @@ footer ol { margin: 0; padding-left: 18px; } footer li { margin-bottom: 6px; }
   <p class="prose">Matrix-Game-3.0 has no ego-vehicle prior. A vehicle composited into the conditioning frame is treated as static scene content: the camera drives into it and it smears across the lower image within about a second. Conditioning on the inpainted frame and compositing the vehicle afterwards removes the artifact.</p>
   <figure>
     <div class="strip">{{STRIP}}</div>
-    <figcaption><b>Figure 2.</b> Same scene, actions and seed. Top: the conditioning frame contains the vehicle and no overlay is drawn. Bottom: vehicle-free conditioning frame with the vehicle composited from the render bank. Times are displayed time at 2× playback.</figcaption>
+    <figcaption><b>Figure 2.</b> Same scene, actions and seed. Top: the conditioning frame contains the vehicle and no overlay is drawn. Bottom: vehicle-free conditioning frame with the vehicle composited from the render bank. Times are controller time; every second generated frame is shown.</figcaption>
   </figure>
 
   <h3>Forward speed</h3>
@@ -574,7 +574,7 @@ function initPano() {
   const vid = document.createElement('video'); Object.assign(vid, {muted: true, loop: true, playsInline: true, crossOrigin: 'anonymous'});
   const tex = new THREE.VideoTexture(vid); tex.minFilter = THREE.LinearFilter;
   scene.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({map: tex})));
-  let lon = 0, lat = -3, drag = null, visible = false;
+  let lon = 180, lat = -3, drag = null, visible = false;  // lon 180 = equirect centre = driving direction
   const size = () => { const w = box.clientWidth, h = box.clientHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); };
   size(); addEventListener('resize', size);
   box.addEventListener('pointerdown', e => { drag = {x: e.clientX, y: e.clientY, lon, lat}; box.setPointerCapture(e.pointerId); });
@@ -585,7 +585,7 @@ function initPano() {
     requestAnimationFrame(loop); if (!visible) return;
     const phi = THREE.MathUtils.degToRad(90 - lat), th = THREE.MathUtils.degToRad(lon);
     cam.lookAt(500 * Math.sin(phi) * Math.cos(th), 500 * Math.cos(phi), 500 * Math.sin(phi) * Math.sin(th));
-    $('#compass').textContent = `yaw ${(((lon % 360) + 540) % 360 - 180).toFixed(0)}°, pitch ${lat.toFixed(0)}°`;
+    $('#compass').textContent = `yaw ${((((lon - 180) % 360) + 540) % 360 - 180).toFixed(0)}°, pitch ${lat.toFixed(0)}°`;
     renderer.render(scene, cam);
   })();
   const pick = k => { vid.src = panos[k].src; $('#panoflat').src = panos[k].src; if (visible) vid.play().catch(() => {});
