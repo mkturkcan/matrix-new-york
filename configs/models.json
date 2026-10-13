@@ -1,0 +1,66 @@
+[
+ {
+  "id": "mg3",
+  "name": "Matrix-Game-3.0",
+  "org": "Skywork AI, 2026",
+  "color": "#ffc928",
+  "videos_dir": "outputs/videos",
+  "config": "configs/showcase.json",
+  "link": "https://huggingface.co/Skywork/Matrix-Game-3.0",
+  "facts": [
+   [
+    "Input",
+    "perspective image and text prompt"
+   ],
+   [
+    "Control",
+    "keyboard W and camera yaw per frame"
+   ],
+   [
+    "Memory",
+    "camera-aware retrieval of past latents"
+   ],
+   [
+    "Output",
+    "704×1280 at 17 fps, 40-frame chunks"
+   ],
+   [
+    "Adapter",
+    "W duty cycle and yaw rate from the bicycle model; ego vehicle composited"
+   ],
+   [
+    "License",
+    "Apache-2.0"
+   ]
+  ],
+  "summary": "First-person action-conditioned model. Conditioned on the vehicle-free frame; the ego vehicle is drawn from the render bank.",
+  "playback": "2× playback (frame stride 2)",
+  "pending": false
+ },
+ {
+  "id": "mg35",
+  "name": "Matrix-Game-3.5",
+  "org": "Riemann Dynamics, 2026",
+  "color": "#5cc8ff",
+  "videos_dir": "outputs/videos_mg35",
+  "config": "configs/showcase_mg35.json",
+  "link": "https://huggingface.co/RiemannDynamics/Matrix-Game-3.5-Base",
+  "facts": [],
+  "summary": "",
+  "playback": "",
+  "pending": true
+ },
+ {
+  "id": "panoworld",
+  "name": "PanoWorld",
+  "org": "Insta360 Research, 2026",
+  "color": "#b69bff",
+  "videos_dir": "outputs/videos_panoworld",
+  "config": "configs/showcase_panoworld.json",
+  "link": "https://huggingface.co/Insta360-Research/PanoWorld",
+  "facts": [],
+  "summary": "",
+  "playback": "",
+  "pending": true
+ }
+]

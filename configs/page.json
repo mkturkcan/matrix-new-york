@@ -1,0 +1,46 @@
+{
+ "abstract": "We drive pretrained action-conditioned video world models through New York City starting from street-level imagery. For a query location we retrieve the nearest Google Street View panorama, reproject it along the capture heading, remove near-field vehicles, and insert a 3D vehicle rendered under a chase camera. A kinematic bicycle model converts throttle and steering into each model's action space. First-person models are conditioned on the vehicle-free frame, and the ego vehicle is composited from renders indexed by the controller's yaw relative to the camera. No model is fine-tuned, and each rollout runs on a single GPU.",
+ "models_lede": "All models receive the same initial observation and the same controller trajectory; only the action adapter differs.",
+ "pano_lede": "",
+ "results_lede": "All rollouts start from a single Street View frame. Select a clip to open it in the viewer above.",
+ "mapping": [
+  [
+   "Conditioning",
+   {
+    "mg3": "vehicle-free perspective frame and text prompt"
+   }
+  ],
+  [
+   "Forward motion",
+   {
+    "mg3": "W, duty min(v / 10 m/s, 1)"
+   }
+  ],
+  [
+   "Steering",
+   {
+    "mg3": "camera yaw Δψ<sub>c</sub> / 15° per frame"
+   }
+  ],
+  [
+   "Ego vehicle",
+   {
+    "mg3": "composited at relative yaw ψ − ψ<sub>c</sub>"
+   }
+  ],
+  [
+   "Playback",
+   {
+    "mg3": "frame stride 2 (controller at 34 Hz)"
+   }
+  ]
+ ],
+ "analysis_extra": "",
+ "limitations": [
+  "Only the first frame is observed. Content entering the view later is sampled from the model's prior and does not match the real street.",
+  "Quality is highest in roughly the first 15 s of generated time. Afterwards facades simplify into flat geometry, road texture streaks, and color shifts. Forward driving rarely revisits earlier viewpoints, so camera-aware memory does not counteract this.",
+  "The composited ego vehicle is a 2D layer. It is not occluded by, does not shadow, and does not interact with generated content.",
+  "Large heading changes away from intersections steer the camera into facades. Turn routes are only meaningful when the first frame is at an intersection."
+ ],
+ "refs_extra": ""
+}
