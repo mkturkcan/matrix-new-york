@@ -48,14 +48,6 @@
   "sub": "route: downtown \u00b7 park_avenue"
  },
  {
-  "scene": "data/inputs/brooklyn_bridge",
-  "route": "cruise",
-  "group": "Highway",
-  "title": "Brooklyn Bridge, toward Lower Manhattan",
-  "label": "BROOKLYN BRIDGE",
-  "sub": "route: cruise \u00b7 brooklyn_bridge"
- },
- {
   "scene": "data/inputs/canal_street",
   "route": "cruise",
   "group": "Downtown",

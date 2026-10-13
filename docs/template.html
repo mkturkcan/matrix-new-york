@@ -78,14 +78,14 @@
 <main class="wrap">
   <section>
     <h2>Drive the city</h2>
-    <p class="lede">Each clip starts from a single real Street View frame. Everything after that comes from the world model, driven by keyboard and steering actions: W for throttle, yaw for the steering wheel, short strafes for lane changes.</p>
+    <p class="lede">Each clip starts from a single real Street View frame. Everything after that comes from the world model, driven by keyboard and steering actions: W for throttle, yaw for the steering wheel, short strafes for lane changes. Matrix-Game-3.0 is a first-person model, so it would drive straight through the car in the first frame. Like a game engine drawing the player over the world, we re-draw the same car layer on every frame and let it lean with the steering.</p>
     <div class="tabs" role="tablist" id="tabs"></div>
     <div class="grid" id="grid"></div>
   </section>
 
   <section>
     <h2>How a scene is built</h2>
-    <p class="lede">One Python script turns a latitude and longitude into a playable first frame.</p>
+    <p class="lede">One Python script turns a latitude and longitude into a playable first frame: find the nearest official Street View panorama, look down the road, erase the vehicles near the camera, and drop in a MeshFleet car rendered from a chase camera.</p>
     <div class="pipeline" id="pipeline"></div>
   </section>
 
@@ -117,7 +117,7 @@ python -m nycdrive.drive --scene data/inputs/times_square --interactive</pre>
   <footer>
     Built on <a href="https://github.com/SkyworkAI/Matrix-Game">Matrix-Game-3.0</a> (Skywork AI, Apache-2.0),
     <a href="https://github.com/sk-zk/streetlevel">streetlevel</a>,
-    <a href="https://huggingface.co/datasets/DamianBoborzi/MeshFleet">MeshFleet</a> / Objaverse vehicle meshes,
+    <a href="https://huggingface.co/datasets/DamianBoborzi/MeshFleet">MeshFleet</a> (car meshes from Sketchfab, CC-BY: see the repo README for each author),
     Mask2Former and LaMa. Street View imagery © Google. This is a research demo, not affiliated with any of the above.
   </footer>
 </main>

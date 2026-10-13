@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matrix New York</title>
+<meta name="description" content="Driving through New York City inside a world model: Street View panoramas + MeshFleet cars + Matrix-Game-3.0.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0c0f; --panel: #14161b; --line: #262a33; --text: #e9eaee; --muted: #9aa0ad;
+    --taxi: #ffcc00; --taxi-ink: #1a1400;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { --bg: #f6f6f3; --panel: #ffffff; --line: #e2e2dc; --text: #16171a; --muted: #5d626d; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; line-height: 1.55; }
+  a { color: inherit; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+  header.hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+  .hero video { width: 100%; height: min(62vh, 640px); object-fit: cover; display: block; filter: saturate(1.05); }
+  .hero .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.0) 40%, rgba(0,0,0,.75) 100%); pointer-events: none; }
+  .hero .title { position: absolute; left: 0; right: 0; bottom: 28px; color: #fff; }
+  .badge { display: inline-block; font: 600 12px/1 "JetBrains Mono", monospace; letter-spacing: .08em; text-transform: uppercase;
+           background: var(--taxi); color: var(--taxi-ink); padding: 6px 8px; border-radius: 3px; }
+  h1 { font-size: clamp(36px, 7vw, 76px); line-height: .95; margin: 12px 0 10px; font-weight: 900; letter-spacing: -.02em; }
+  .hero p { max-width: 720px; margin: 0; font-size: clamp(15px, 2vw, 19px); color: #e8e8e8; }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 600; font-size: 14px;
+         padding: 10px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,.35); color: #fff; background: rgba(0,0,0,.35); }
+  .btn.primary { background: var(--taxi); color: var(--taxi-ink); border-color: var(--taxi); }
+  section { padding: 56px 0 8px; }
+  h2 { font-size: 28px; margin: 0 0 6px; letter-spacing: -.01em; }
+  .lede { color: var(--muted); margin: 0 0 24px; max-width: 760px; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .tab { font: 600 13px/1 "JetBrains Mono", monospace; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--line);
+         background: var(--panel); color: var(--text); cursor: pointer; }
+  .tab[aria-selected="true"] { background: var(--taxi); color: var(--taxi-ink); border-color: var(--taxi); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .card video { width: 100%; aspect-ratio: 1280 / 704; display: block; background: #000; }
+  .card .meta { padding: 12px 14px 14px; }
+  .card .name { font-weight: 700; }
+  .card .sub { color: var(--muted); font-size: 13px; font-family: "JetBrains Mono", monospace; }
+  .pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .step img { width: 100%; aspect-ratio: 1280/704; object-fit: cover; display: block; }
+  .step .t { padding: 10px 12px 12px; font-size: 14px; }
+  .step .n { font: 600 12px "JetBrains Mono", monospace; color: var(--taxi); }
+  pre { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow-x: auto;
+        font: 13px/1.6 "JetBrains Mono", monospace; }
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .key { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  .key b { font-family: "JetBrains Mono", monospace; color: var(--taxi); margin-right: 6px; }
+  footer { color: var(--muted); font-size: 13px; padding: 48px 0 64px; border-top: 1px solid var(--line); margin-top: 56px; }
+  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } .hero video { height: 56vh; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <video id="hero" autoplay muted loop playsinline></video>
+  <div class="shade"></div>
+  <div class="title"><div class="wrap">
+    <span class="badge">World model game demo</span>
+    <h1>Matrix New York</h1>
+    <p>Pick any spot in New York City. We pull the real Street View panorama, erase the cars around you, drop in your own 3D car, and let the <b>Matrix-Game-3.0</b> world model do the rest: every frame after the first is generated.</p>
+    <div class="links">
+      <a class="btn primary" href="https://github.com/mkturkcan/matrix-new-york">GitHub repo</a>
+      <a class="btn" href="https://huggingface.co/Skywork/Matrix-Game-3.0">Matrix-Game-3.0</a>
+      <a class="btn" href="https://huggingface.co/datasets/DamianBoborzi/MeshFleet">MeshFleet</a>
+      <a class="btn" href="https://github.com/sk-zk/streetlevel">streetlevel</a>
+    </div>
+  </div></div>
+</header>
+
+<main class="wrap">
+  <section>
+    <h2>Drive the city</h2>
+    <p class="lede">Each clip starts from a single real Street View frame. Everything after that comes from the world model, driven by keyboard and steering actions: W for throttle, yaw for the steering wheel, short strafes for lane changes. Matrix-Game-3.0 is a first-person model, so it would drive straight through the car in the first frame. Like a game engine drawing the player over the world, we re-draw the same car layer on every frame and let it lean with the steering.</p>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section>
+    <h2>How a scene is built</h2>
+    <p class="lede">One Python script turns a latitude and longitude into a playable first frame: find the nearest official Street View panorama, look down the road, erase the vehicles near the camera, and drop in a MeshFleet car rendered from a chase camera.</p>
+    <div class="pipeline" id="pipeline"></div>
+  </section>
+
+  <section>
+    <h2>Controls (interactive mode)</h2>
+    <p class="lede">In interactive mode the world model pauses after every chunk and waits for your next command.</p>
+    <div class="controls">
+      <div class="key"><b>w</b>gas</div>
+      <div class="key"><b>s</b>brake / reverse</div>
+      <div class="key"><b>a / d</b>steer left / right</div>
+      <div class="key"><b>wa / wd</b>accelerate through a turn</div>
+      <div class="key"><b>z / c</b>lane change left / right</div>
+      <div class="key"><b>q</b>coast</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Run it</h2>
+<pre># 1. build first frames (curated scenes, a random NYC spot, or your own lat/lon)
+python -m nycdrive.prepare_inputs                 # curated highway + downtown scenes
+python -m nycdrive.prepare_inputs --random        # random spot in NYC
+python -m nycdrive.prepare_inputs --lat 40.7580 --lon -73.9855 --name my_spot
+
+# 2. drive: scripted route to video, or play interactively
+python -m nycdrive.drive --scene data/inputs/fdr_drive --route highway
+python -m nycdrive.drive --scene data/inputs/times_square --interactive</pre>
+  </section>
+
+  <footer>
+    Built on <a href="https://github.com/SkyworkAI/Matrix-Game">Matrix-Game-3.0</a> (Skywork AI, Apache-2.0),
+    <a href="https://github.com/sk-zk/streetlevel">streetlevel</a>,
+    <a href="https://huggingface.co/datasets/DamianBoborzi/MeshFleet">MeshFleet</a> (car meshes from Sketchfab, CC-BY: see the repo README for each author),
+    Mask2Former and LaMa. Street View imagery © Google. This is a research demo, not affiliated with any of the above.
+  </footer>
+</main>
+
+<script>
+const DATA = /*DATA*/{"videos": [{"src": "videos/fdr_drive_highway.mp4", "poster": "videos/fdr_drive_highway.jpg", "group": "Highway", "title": "FDR Drive along the East River", "sub": "route: highway \u00b7 fdr_drive"}, {"src": "videos/times_square_downtown.mp4", "poster": "videos/times_square_downtown.jpg", "group": "Downtown", "title": "Seventh Avenue through Times Square", "sub": "route: downtown \u00b7 times_square"}, {"src": "videos/gowanus_expressway_highway.mp4", "poster": "videos/gowanus_expressway_highway.jpg", "group": "Highway", "title": "Gowanus Expressway, Brooklyn", "sub": "route: highway \u00b7 gowanus_expressway"}, {"src": "videos/fifth_avenue_downtown.mp4", "poster": "videos/fifth_avenue_downtown.jpg", "group": "Downtown", "title": "Fifth Avenue, Midtown", "sub": "route: downtown \u00b7 fifth_avenue"}, {"src": "videos/henry_hudson_pkwy_highway.mp4", "poster": "videos/henry_hudson_pkwy_highway.jpg", "group": "Highway", "title": "Henry Hudson Parkway", "sub": "route: highway \u00b7 henry_hudson_pkwy"}, {"src": "videos/park_avenue_downtown.mp4", "poster": "videos/park_avenue_downtown.jpg", "group": "Downtown", "title": "Park Avenue", "sub": "route: downtown \u00b7 park_avenue"}, {"src": "videos/canal_street_cruise.mp4", "poster": "videos/canal_street_cruise.jpg", "group": "Downtown", "title": "Canal Street, Chinatown", "sub": "route: cruise \u00b7 canal_street"}, {"src": "videos/fdr_drive_weave.mp4", "poster": "videos/fdr_drive_weave.jpg", "group": "Highway", "title": "FDR Drive, weaving through lanes", "sub": "route: weave \u00b7 fdr_drive"}, {"src": "videos/soho_broadway_downtown.mp4", "poster": "videos/soho_broadway_downtown.jpg", "group": "Downtown", "title": "Broadway, SoHo", "sub": "route: downtown \u00b7 soho_broadway"}, {"src": "videos/dumbo_cruise.mp4", "poster": "videos/dumbo_cruise.jpg", "group": "Downtown", "title": "DUMBO cobblestones, Brooklyn", "sub": "route: cruise \u00b7 dumbo"}, {"src": "videos/times_square_sightseeing.mp4", "poster": "videos/times_square_sightseeing.jpg", "group": "Downtown", "title": "Times Square, looking around", "sub": "route: sightseeing \u00b7 times_square"}], "pipeline": [{"src": "assets/step_raw.jpg", "title": "Street View panorama, reprojected to look down the road"}, {"src": "assets/step_mask.jpg", "title": "Vehicles near the camera segmented (Mask2Former)"}, {"src": "assets/step_inpainted.jpg", "title": "Nearby cars erased with LaMa inpainting"}, {"src": "assets/step_image.jpg", "title": "MeshFleet car rendered in chase-cam view and composited"}], "hero": "videos/hero.mp4"}/*END*/;
+const grid = document.getElementById('grid'), tabs = document.getElementById('tabs');
+document.getElementById('hero').src = DATA.hero;
+const groups = ['All', ...new Set(DATA.videos.map(v => v.group))];
+function render(group) {
+  grid.innerHTML = '';
+  DATA.videos.filter(v => group === 'All' || v.group === group).forEach(v => {
+    const c = document.createElement('div'); c.className = 'card';
+    c.innerHTML = `<video src="${v.src}" poster="${v.poster || ''}" muted loop playsinline preload="metadata" controls></video>
+      <div class="meta"><div class="name">${v.title}</div><div class="sub">${v.sub}</div></div>`;
+    grid.appendChild(c);
+  });
+  const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? e.target.play().catch(()=>{}) : e.target.pause()), {threshold: .4});
+  grid.querySelectorAll('video').forEach(el => io.observe(el));
+}
+groups.forEach((g, i) => {
+  const b = document.createElement('button'); b.className = 'tab'; b.textContent = g; b.setAttribute('role', 'tab');
+  b.setAttribute('aria-selected', i === 0); b.onclick = () => { tabs.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t === b)); render(g); };
+  tabs.appendChild(b);
+});
+render('All');
+const pipe = document.getElementById('pipeline');
+DATA.pipeline.forEach((s, i) => {
+  const d = document.createElement('div'); d.className = 'step';
+  d.innerHTML = `<img src="${s.src}" alt="${s.title}" loading="lazy"><div class="t"><div class="n">STEP ${i + 1}</div>${s.title}</div>`;
+  pipe.appendChild(d);
+});
+</script>
+</body>
+</html>

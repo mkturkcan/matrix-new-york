@@ -12,7 +12,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
-FFMPEG = shutil.which("ffmpeg") or "/home/mkt2126/miniconda3/envs/ai/bin/ffmpeg"
+FFMPEG = shutil.which("ffmpeg") or __import__("imageio_ffmpeg").get_ffmpeg_exe()
 
 
 def encode(src: Path, dst: Path, crf=27):
@@ -69,7 +69,12 @@ def main():
         for fn, title in steps:
             if (sdir / fn).exists():
                 out = DOCS / "assets" / f"step_{Path(fn).stem}.jpg"
-                Image.open(sdir / fn).convert("RGB").save(out, quality=85)
+                im = Image.open(sdir / fn).convert("RGB")
+                if fn == "mask.png":  # show the mask as a red overlay on the panorama crop
+                    raw = Image.open(sdir / "raw.png").convert("RGB")
+                    red = Image.new("RGB", raw.size, (255, 40, 40))
+                    im = Image.composite(Image.blend(raw, red, 0.6), raw, im.convert("L"))
+                im.save(out, quality=85)
                 pipeline.append({"src": f"assets/{out.name}", "title": title})
 
     data = json.dumps({"videos": videos, "pipeline": pipeline, "hero": hero})

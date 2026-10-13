@@ -64,13 +64,13 @@ def make_saver(label, top_speed, units, car_layer=None):
         keyboard, mouse = config
         frames = np.asarray(input_video).astype(np.uint8)
         base = os.path.splitext(output_video)[0]
+        np.savez(base + "_actions.npz", keyboard=keyboard, mouse=mouse)
         imageio.mimwrite(base + "_world.mp4", frames, fps=FPS, quality=8, macro_block_size=None)
         if car_layer is not None:
             frames = composite_player(frames, keyboard, mouse, car_layer)
         imageio.mimwrite(base + "_clean.mp4", frames, fps=FPS, quality=8, macro_block_size=None)
         hud = draw_hud(frames, keyboard, mouse, label=label, top_speed=top_speed, units=units)
         imageio.mimwrite(base + "_hud.mp4", hud, fps=FPS, quality=8, macro_block_size=None)
-        np.savez(base + "_actions.npz", keyboard=keyboard, mouse=mouse)
         print(f"[nycdrive] wrote {base}_clean.mp4 and {base}_hud.mp4 ({len(frames)} frames)")
     return save
 

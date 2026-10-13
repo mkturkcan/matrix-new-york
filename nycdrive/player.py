@@ -49,7 +49,7 @@ def composite_player(frames, keyboard, mouse, layer):
         k = keyboard[min(i, len(keyboard) - 1)]
         yaw = float(mouse[min(i, len(mouse) - 1)][1])
         steer += (np.clip(yaw / 0.1, -1, 1) - steer) * 0.15
-        lane_cmd = (k[3] > 0.5) - (k[2] > 0.5)
+        lane_cmd = float(k[3] > 0.5) - float(k[2] > 0.5)
         lane += (lane_cmd - lane) * 0.12
         moving = k[0] > 0.5 or k[1] > 0.5
         bob = 1.2 * np.sin(i * 0.9) if moving else 0.0

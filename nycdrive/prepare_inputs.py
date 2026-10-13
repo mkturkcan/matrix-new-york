@@ -35,6 +35,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageFilter
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # allow `python nycdrive/prepare_inputs.py`
 from nycdrive.car_render import PLAYER_CARS, mesh_path, render_car
 
 OUT_W, OUT_H = 1280, 704
