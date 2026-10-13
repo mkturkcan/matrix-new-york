@@ -10,3 +10,4 @@ data/inputs/*/raw_pano*
 *.glb
 .claude/
 data/
+.venv*/
