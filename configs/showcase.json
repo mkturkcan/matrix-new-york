@@ -86,5 +86,21 @@
   "title": "Times Square, looking around",
   "label": "TIMES SQUARE",
   "sub": "route: sightseeing \u00b7 times_square"
+ },
+ {
+  "scene": "data/inputs/random_40.67570_-73.92808",
+  "route": "cruise",
+  "group": "Random & custom",
+  "title": "Random spot: Crown Heights, Brooklyn",
+  "label": "RANDOM - BROOKLYN",
+  "sub": "--random --seed 7 \u00b7 route: cruise"
+ },
+ {
+  "scene": "data/inputs/herald_square",
+  "route": "downtown",
+  "group": "Random & custom",
+  "title": "Custom lat/lon: Herald Square",
+  "label": "HERALD SQUARE",
+  "sub": "--lat 40.7497 --lon -73.9877 \u00b7 route: downtown"
  }
 ]
